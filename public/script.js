@@ -28,10 +28,13 @@ const changeUsernameInput = document.getElementById('change-username-input');
 const changeUsernameButton = document.getElementById('change-username-btn');
 const onlineUsersList = document.getElementById('online-users');
 
-const typingIndicator = document.getElementById('typing-indicator');
+const typingIndicator = document.createElement('div');
+typingIndicator.classList.add('text-sm', 'text-gray-500', 'mt-2');
+input.parentElement.insertBefore(typingIndicator, input);
 
 let username = localStorage.getItem('username') || '';
 
+// List of allowed usernames
 const allowedNames = [
   "Emiliano", "Fiona", "Eliot", "Krishay", "Channing", "Anna", "Mayla",
   "Adela", "Nathaniel", "Noah", "Stefan", "Michael", "Adam", "Nicholas",
@@ -54,14 +57,15 @@ function getRandomColor() {
 
 function enterChat() {
   const enteredUsername = usernameInput.value.trim();
+  const capitalizedUsername = capitalizeFirstLetter(enteredUsername);
 
-  if (!allowedNames.includes(capitalizeFirstLetter(enteredUsername))) {
+  if (!allowedNames.includes(capitalizedUsername)) {
     alert('This username is not allowed. Please choose another one.');
     return;
   }
 
   if (enteredUsername) {
-    username = enteredUsername;
+    username = capitalizedUsername;
     localStorage.setItem('username', username);
     const color = getRandomColor();
     const avatar = username[0].toUpperCase();
@@ -203,17 +207,18 @@ publicChatButtonTop.addEventListener('click', () => {
 
 changeUsernameButton.addEventListener('click', () => {
   const newUsername = changeUsernameInput.value.trim();
+  const capitalizedUsername = capitalizeFirstLetter(newUsername);
 
-  if (!allowedNames.includes(capitalizeFirstLetter(newUsername))) {
+  if (!allowedNames.includes(capitalizedUsername)) {
     alert('This username is not allowed. Please choose another one.');
     return;
   }
 
   if (newUsername) {
-    socket.emit('username changed', newUsername);
-    username = newUsername;
+    socket.emit('username changed', capitalizedUsername);
+    username = capitalizedUsername;
     localStorage.setItem('username', username);
-    logChatMessage(`Username changed to ${newUsername}`);
+    logChatMessage(`Username changed to ${capitalizedUsername}`);
     changeUsernameInput.value = '';
     settingsModal.classList.add('hidden');
   } else {
