@@ -5,7 +5,6 @@ const chatUI = document.getElementById('chat-ui');
 const usernameScreen = document.getElementById('username-screen');
 const usernameInput = document.getElementById('username-input');
 const enterChatBtn = document.getElementById('enter-chat-btn');
-const errorMessageElement = document.getElementById('error-message'); // For displaying error messages
 
 const input = document.getElementById('message-input');
 const sendButton = document.getElementById('send-btn');
@@ -32,6 +31,11 @@ const onlineUsersList = document.getElementById('online-users');
 const typingIndicator = document.createElement('div');
 typingIndicator.classList.add('text-sm', 'text-gray-500', 'mt-2');
 input.parentElement.insertBefore(typingIndicator, input);
+
+// New error message element
+const errorMessageElement = document.createElement('div');
+errorMessageElement.classList.add('text-red-500', 'mt-2');
+usernameScreen.appendChild(errorMessageElement);
 
 let username = localStorage.getItem('username') || '';
 
@@ -60,12 +64,11 @@ function enterChat() {
   const enteredUsername = usernameInput.value.trim();
   const capitalizedUsername = capitalizeFirstLetter(enteredUsername);
 
-  // Clear previous error message
-  errorMessageElement.textContent = '';
-
   if (!allowedNames.includes(capitalizedUsername)) {
     errorMessageElement.textContent = 'Use your real name please.';
     return;
+  } else {
+    errorMessageElement.textContent = '';  // Clear error if username is valid
   }
 
   if (enteredUsername) {
