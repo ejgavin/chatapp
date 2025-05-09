@@ -217,7 +217,7 @@ changeUsernameButton.addEventListener('click', () => {
   const capitalizedUsername = capitalizeFirstLetter(newUsername);
 
   if (!allowedNames.includes(capitalizedUsername)) {
-    logChatMessage('Use your real name please.');
+    alert('This username is not allowed. Please choose another one.');
     return;
   }
 
@@ -252,24 +252,27 @@ function displayMessage(msg) {
 
 function logChatMessage(text) {
   const item = document.createElement('div');
-  item.innerHTML = `<div class="text-gray-500 text-sm italic">${text}</div>`;
+  item.innerHTML = `<div class="text-gray-500 italic">${text}</div>`;
   messages.appendChild(item);
   messages.scrollTop = messages.scrollHeight;
 }
 
 function logPrivateMessage(text) {
   const item = document.createElement('div');
-  item.innerHTML = `
-    <div class="bg-blue-100 p-2 rounded-md">
-      <strong>Private to ${privateRecipient}:</strong> ${sanitize(text)}
-    </div>
-  `;
+  item.innerHTML = `<div class="text-gray-500 italic">Private: ${text}</div>`;
   messages.appendChild(item);
   messages.scrollTop = messages.scrollHeight;
 }
 
-function sanitize(str) {
-  const temp = document.createElement('div');
-  temp.textContent = str;
-  return temp.innerHTML;
+function sanitize(input) {
+  const element = document.createElement('div');
+  if (input) {
+    element.innerText = input;
+    return element.innerHTML;
+  }
+  return '';
 }
+
+socket.on('error', (message) => {
+  alert(`Error: ${message}`);
+});
