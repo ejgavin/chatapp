@@ -103,7 +103,7 @@ socket.on('private message', msg => {
   const item = document.createElement('div');
   item.innerHTML = `
     <div class="bg-green-100 p-2 rounded-md">
-      <strong>Private from ${msg.user}: </strong>${msg.text}
+      <strong>Private from ${msg.user}: </strong>${sanitize(msg.text)}
     </div>
   `;
   messages.appendChild(item);
@@ -167,75 +167,75 @@ startPrivateChatButton.addEventListener('click', () => {
     chatType.textContent = 'Private Chat';
     currentChatWith.textContent = privateRecipient;
   } else {
-      logChatMessage('Please enter a valid username for private chat.');
-    }
-  });
+    logChatMessage('Please enter a valid username for private chat.');
+  }
+});
 
-  publicChatButton.addEventListener('click', () => {
-    privateRecipient = null;
-    logChatMessage('Switched to public chat.');
-    chatType.textContent = 'Public Chat';
-    currentChatWith.textContent = 'No one';
-  });
+publicChatButton.addEventListener('click', () => {
+  privateRecipient = null;
+  logChatMessage('Switched to public chat.');
+  chatType.textContent = 'Public Chat';
+  currentChatWith.textContent = 'No one';
+});
 
-  publicChatButtonTop.addEventListener('click', () => {
-    privateRecipient = null;
-    logChatMessage('Switched to public chat.');
-    chatType.textContent = 'Public Chat';
-    currentChatWith.textContent = 'No one';
-  });
+publicChatButtonTop.addEventListener('click', () => {
+  privateRecipient = null;
+  logChatMessage('Switched to public chat.');
+  chatType.textContent = 'Public Chat';
+  currentChatWith.textContent = 'No one';
+});
 
-  changeUsernameButton.addEventListener('click', () => {
-    const newUsername = changeUsernameInput.value.trim();
-    if (newUsername) {
-      socket.emit('username changed', newUsername);
-      username = newUsername;
-      localStorage.setItem('username', username);
-      logChatMessage(`Username changed to ${newUsername}`);
-      changeUsernameInput.value = '';
-      settingsModal.classList.add('hidden');
-    } else {
-      logChatMessage('Please enter a valid new username.');
-    }
-  });
+changeUsernameButton.addEventListener('click', () => {
+  const newUsername = changeUsernameInput.value.trim();
+  if (newUsername) {
+    socket.emit('username changed', newUsername);
+    username = newUsername;
+    localStorage.setItem('username', username);
+    logChatMessage(`Username changed to ${newUsername}`);
+    changeUsernameInput.value = '';
+    settingsModal.classList.add('hidden');
+  } else {
+    logChatMessage('Please enter a valid new username.');
+  }
+});
 
-  function displayMessage(msg) {
-    const item = document.createElement('div');
-    item.classList.add('message-item');
-    item.innerHTML = `
-      <div class="flex items-center space-x-2 mb-1">
-        <div class="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-white text-sm font-bold" style="background-color: ${msg.color}">
-          ${msg.avatar}
-        </div>
-        <span class="text-sm font-medium" style="color: ${msg.color}">${msg.user}</span>
-        <span class="text-xs text-gray-500">${msg.time}</span>
+function displayMessage(msg) {
+  const item = document.createElement('div');
+  item.classList.add('message-item');
+  item.innerHTML = `
+    <div class="flex items-center space-x-2 mb-1">
+      <div class="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-white text-sm font-bold" style="background-color: ${msg.color}">
+        ${msg.avatar}
       </div>
-      <div class="ml-8">${sanitize(msg.text)}</div>
-    `;
-    messages.appendChild(item);
-    messages.scrollTop = messages.scrollHeight;
-  }
+      <span class="text-sm font-medium" style="color: ${msg.color}">${msg.user}</span>
+      <span class="text-xs text-gray-500">${msg.time}</span>
+    </div>
+    <div class="ml-8">${sanitize(msg.text)}</div>
+  `;
+  messages.appendChild(item);
+  messages.scrollTop = messages.scrollHeight;
+}
 
-  function logChatMessage(text) {
-    const item = document.createElement('div');
-    item.innerHTML = `<div class="text-gray-500 text-sm italic">${text}</div>`;
-    messages.appendChild(item);
-    messages.scrollTop = messages.scrollHeight;
-  }
+function logChatMessage(text) {
+  const item = document.createElement('div');
+  item.innerHTML = `<div class="text-gray-500 text-sm italic">${text}</div>`;
+  messages.appendChild(item);
+  messages.scrollTop = messages.scrollHeight;
+}
 
-  function logPrivateMessage(text) {
-    const item = document.createElement('div');
-    item.innerHTML = `
-      <div class="bg-blue-100 p-2 rounded-md">
-        <strong>Private to ${privateRecipient}:</strong> ${sanitize(text)}
-      </div>
-    `;
-    messages.appendChild(item);
-    messages.scrollTop = messages.scrollHeight;
-  }
+function logPrivateMessage(text) {
+  const item = document.createElement('div');
+  item.innerHTML = `
+    <div class="bg-blue-100 p-2 rounded-md">
+      <strong>Private to ${privateRecipient}:</strong> ${sanitize(text)}
+    </div>
+  `;
+  messages.appendChild(item);
+  messages.scrollTop = messages.scrollHeight;
+}
 
-  function sanitize(str) {
-    const temp = document.createElement('div');
-    temp.textContent = str;
-    return temp.innerHTML;
-  }
+function sanitize(str) {
+  const temp = document.createElement('div');
+  temp.textContent = str;
+  return temp.innerHTML;
+}
