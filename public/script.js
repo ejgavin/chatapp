@@ -34,22 +34,34 @@ messages.appendChild(typingIndicator);
 
 let username;
 
+function getRandomColor() {
+  let color;
+  do {
+    color = "#" + Math.floor(Math.random() * 16777215).toString(16);
+  } while (color.toLowerCase() === "#ffffff");
+  return color;
+}
+
 // Handle login
-enterChatBtn.addEventListener('click', () => {
+function enterChat() {
   const enteredUsername = usernameInput.value.trim();
   if (enteredUsername) {
     username = enteredUsername;
     localStorage.setItem('username', username);
-    const color = "#" + Math.floor(Math.random() * 16777215).toString(16);
+    const color = getRandomColor();
     const avatar = username[0].toUpperCase();
     socket.emit('new user', username, color, avatar);
     usernameScreen.classList.add('hidden');
     chatUI.classList.remove('hidden');
   }
+}
+
+enterChatBtn.addEventListener('click', enterChat);
+usernameInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') enterChat();
 });
 
-sendButton.addEventListener('click', (e) => {
-  e.preventDefault();
+function sendMessage() {
   if (input.value.trim()) {
     if (privateRecipient) {
       socket.emit('private message', { recipient: privateRecipient, message: input.value });
@@ -59,6 +71,18 @@ sendButton.addEventListener('click', (e) => {
     }
     socket.emit('typing', false);
     input.value = '';
+  }
+}
+
+sendButton.addEventListener('click', (e) => {
+  e.preventDefault();
+  sendMessage();
+});
+
+input.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    sendMessage();
   }
 });
 
