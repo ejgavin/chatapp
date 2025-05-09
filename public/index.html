@@ -10,10 +10,11 @@
 </head>
 <body class="bg-gray-100 p-4">
 
-  <!-- Login Screen -->
-  <div id="login-screen" class="fixed inset-0 bg-white flex flex-col justify-center items-center z-50">
-    <h1 class="text-2xl font-bold mb-4">Welcome to the Chat App</h1>
-    <button id="google-signin" class="bg-red-500 text-white px-6 py-2 rounded">Sign in with Google</button>
+  <!-- Username Prompt Screen -->
+  <div id="username-screen" class="fixed inset-0 bg-white flex flex-col justify-center items-center z-50">
+    <h1 class="text-2xl font-bold mb-4">Enter Your Username</h1>
+    <input id="username-input" type="text" placeholder="Username" class="p-2 border rounded mb-4 w-64" />
+    <button id="enter-chat-btn" class="bg-blue-500 text-white px-6 py-2 rounded">Enter Chat</button>
   </div>
 
   <!-- Main Chat UI -->
@@ -34,12 +35,15 @@
         </div>
       </div>
 
+      <!-- Chat Info -->
       <div id="chat-info" class="text-sm text-gray-500 mb-2">
         <span id="chat-type">Public Chat</span> | <span id="current-chat-with">No one</span>
       </div>
 
+      <!-- Message Display Area -->
       <div id="messages" class="space-y-2 h-96 overflow-y-auto p-2 border rounded bg-white mb-4"></div>
 
+      <!-- Input + Emoji Area -->
       <div class="mt-4 flex space-x-2 relative">
         <input id="message-input" type="text" class="p-2 flex-1 border rounded" placeholder="Type a message..." />
         <button id="emoji-btn" class="bg-gray-300 p-2 rounded">🙂</button>
@@ -52,6 +56,7 @@
         </div>
       </div>
 
+      <!-- Typing Indicator -->
       <div id="typing-indicator" class="text-sm text-gray-500 mt-1 h-5"></div>
 
       <!-- Settings Modal -->
@@ -64,9 +69,12 @@
             <button id="start-private-chat" class="bg-blue-500 text-white px-4 py-2 rounded mt-2 w-full">Start Private Chat</button>
           </div>
           <div>
-            <button id="logout-btn" class="bg-red-500 text-white px-4 py-2 rounded mt-4 w-full">Log Out</button>
+            <label for="change-username-input" class="block text-sm">Change Username</label>
+            <input id="change-username-input" type="text" class="p-2 border rounded w-full" placeholder="Enter new username" />
+            <button id="change-username-btn" class="bg-yellow-500 text-white px-4 py-2 rounded mt-2 w-full">Change Username</button>
           </div>
-          <button id="close-settings-btn" class="bg-gray-500 text-white px-4 py-2 rounded mt-4 w-full">Close Settings</button>
+          <button id="public-chat-btn" class="bg-gray-500 text-white px-4 py-2 rounded mt-2 w-full">Go to Public Chat</button>
+          <button id="close-settings-btn" class="bg-red-500 text-white px-4 py-2 rounded mt-4 w-full">Close Settings</button>
         </div>
       </div>
 
@@ -75,61 +83,6 @@
       </div>
     </div>
   </div>
-
-  <!-- Firebase + Auth -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-auth.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyDn3V6d8ZmWA_rLDkab93QQj97JoeROl_E",
-      authDomain: "chatroom-fffc9.firebaseapp.com",
-      projectId: "chatroom-fffc9",
-      storageBucket: "chatroom-fffc9.appspot.com",
-      messagingSenderId: "180605239013",
-      appId: "1:180605239013:web:41b0445ddf8f4ef6105e0c",
-      measurementId: "G-DDFW22X142"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
-
-    const loginScreen = document.getElementById("login-screen");
-    const chatUI = document.getElementById("chat-ui");
-    const googleSigninBtn = document.getElementById("google-signin");
-    const logoutBtn = document.getElementById("logout-btn");
-
-    // Ensure persistence is set before checking auth
-    setPersistence(auth, browserLocalPersistence).then(() => {
-      onAuthStateChanged(auth, (user) => {
-        if (user) {
-          loginScreen.classList.add("hidden");
-          chatUI.classList.remove("hidden");
-          window.username = user.displayName;
-        } else {
-          loginScreen.classList.remove("hidden");
-          chatUI.classList.add("hidden");
-        }
-      });
-    }).catch(console.error);
-
-    // Sign in handler
-    googleSigninBtn.addEventListener("click", async () => {
-      try {
-        console.log("Signing in...");
-        await signInWithPopup(auth, provider);
-      } catch (error) {
-        console.error("Sign-in error:", error);
-        alert("Sign-in failed: " + error.message);
-      }
-    });
-
-    // Sign out
-    logoutBtn.addEventListener("click", () => {
-      signOut(auth).catch(console.error);
-    });
-  </script>
 
   <script src="script.js"></script>
 </body>

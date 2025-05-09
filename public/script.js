@@ -61,16 +61,17 @@ usernameInput.addEventListener('keypress', (e) => {
 });
 
 function sendMessage() {
-  if (input.value.trim()) {
-    if (privateRecipient) {
-      socket.emit('private message', { recipient: privateRecipient, message: input.value });
-      logPrivateMessage(input.value);
-    } else {
-      socket.emit('chat message', input.value);
-    }
-    socket.emit('typing', false);
-    input.value = '';
+  const message = input.value.trim();
+  if (!message) return;
+
+  if (privateRecipient) {
+    socket.emit('private message', { recipient: privateRecipient, message });
+    logPrivateMessage(message);
+  } else {
+    socket.emit('chat message', message);
   }
+  socket.emit('typing', false);
+  input.value = '';
 }
 
 sendButton.addEventListener('click', (e) => {
@@ -90,14 +91,10 @@ input.addEventListener('input', () => {
 });
 
 socket.on('chat history', (history) => {
-  history.forEach(msg => {
-    displayMessage(msg);
-  });
+  history.forEach(displayMessage);
 });
 
-socket.on('chat message', msg => {
-  displayMessage(msg);
-});
+socket.on('chat message', displayMessage);
 
 socket.on('private message', msg => {
   const item = document.createElement('div');
@@ -113,7 +110,7 @@ socket.on('private message', msg => {
 socket.on('typing', data => {
   typingIndicator.textContent = data.isTyping ? `${data.user} is typing...` : '';
   chatType.textContent = privateRecipient ? 'Private Chat' : 'Public Chat';
-  currentChatWith.textContent = privateRecipient ? privateRecipient : 'No one';
+  currentChatWith.textContent = privateRecipient || 'No one';
 });
 
 socket.on('update users', users => {
@@ -160,9 +157,10 @@ closeSettingsButton.addEventListener('click', () => {
 });
 
 startPrivateChatButton.addEventListener('click', () => {
-  privateRecipient = privateChatInput.value.trim();
-  if (privateRecipient) {
-    logChatMessage(`Started private chat with ${privateRecipient}`);
+  const recipient = privateChatInput.value.trim();
+  if (recipient) {
+    privateRecipient = recipient;
+    logChatMessage(`Started private chat with ${recipient}`);
     settingsModal.classList.add('hidden');
     chatType.textContent = 'Private Chat';
     currentChatWith.textContent = privateRecipient;
@@ -171,19 +169,15 @@ startPrivateChatButton.addEventListener('click', () => {
   }
 });
 
-publicChatButton.addEventListener('click', () => {
+function switchToPublicChat() {
   privateRecipient = null;
   logChatMessage('Switched to public chat.');
   chatType.textContent = 'Public Chat';
   currentChatWith.textContent = 'No one';
-});
+}
 
-publicChatButtonTop.addEventListener('click', () => {
-  privateRecipient = null;
-  logChatMessage('Switched to public chat.');
-  chatType.textContent = 'Public Chat';
-  currentChatWith.textContent = 'No one';
-});
+publicChatButton.addEventListener('click', switchToPublicChat);
+publicChatButtonTop.addEventListener('click', switchToPublicChat);
 
 changeUsernameButton.addEventListener('click', () => {
   const newUsername = changeUsernameInput.value.trim();
