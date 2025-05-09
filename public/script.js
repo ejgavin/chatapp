@@ -32,7 +32,7 @@ const typingIndicator = document.createElement('div');
 typingIndicator.classList.add('text-sm', 'text-gray-500');
 messages.appendChild(typingIndicator);
 
-let username;
+let username = localStorage.getItem('username') || '';
 
 function getRandomColor() {
   let color;
@@ -42,7 +42,6 @@ function getRandomColor() {
   return color;
 }
 
-// Handle login
 function enterChat() {
   const enteredUsername = usernameInput.value.trim();
   if (enteredUsername) {
@@ -90,19 +89,14 @@ input.addEventListener('input', () => {
   socket.emit('typing', input.value.length > 0);
 });
 
+socket.on('chat history', (history) => {
+  history.forEach(msg => {
+    displayMessage(msg);
+  });
+});
+
 socket.on('chat message', msg => {
-  const item = document.createElement('div');
-  item.innerHTML = `
-    <div class="flex items-start space-x-2">
-      <div class="w-8 h-8 rounded-full text-white flex items-center justify-center text-sm" style="background:${msg.color}">${msg.avatar}</div>
-      <div>
-        <div class="text-sm font-semibold" style="color:${msg.color}">${msg.user} <span class="text-xs text-gray-400 ml-2">${msg.time}</span></div>
-        <div>${msg.text}</div>
-      </div>
-    </div>
-  `;
-  messages.appendChild(item);
-  messages.scrollTop = messages.scrollHeight;
+  displayMessage(msg);
 });
 
 socket.on('private message', msg => {
@@ -173,55 +167,75 @@ startPrivateChatButton.addEventListener('click', () => {
     chatType.textContent = 'Private Chat';
     currentChatWith.textContent = privateRecipient;
   } else {
-    logChatMessage('Please enter a valid username');
+      logChatMessage('Please enter a valid username for private chat.');
+    }
+  });
+
+  publicChatButton.addEventListener('click', () => {
+    privateRecipient = null;
+    logChatMessage('Switched to public chat.');
+    chatType.textContent = 'Public Chat';
+    currentChatWith.textContent = 'No one';
+  });
+
+  publicChatButtonTop.addEventListener('click', () => {
+    privateRecipient = null;
+    logChatMessage('Switched to public chat.');
+    chatType.textContent = 'Public Chat';
+    currentChatWith.textContent = 'No one';
+  });
+
+  changeUsernameButton.addEventListener('click', () => {
+    const newUsername = changeUsernameInput.value.trim();
+    if (newUsername) {
+      socket.emit('username changed', newUsername);
+      username = newUsername;
+      localStorage.setItem('username', username);
+      logChatMessage(`Username changed to ${newUsername}`);
+      changeUsernameInput.value = '';
+      settingsModal.classList.add('hidden');
+    } else {
+      logChatMessage('Please enter a valid new username.');
+    }
+  });
+
+  function displayMessage(msg) {
+    const item = document.createElement('div');
+    item.classList.add('message-item');
+    item.innerHTML = `
+      <div class="flex items-center space-x-2 mb-1">
+        <div class="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-white text-sm font-bold" style="background-color: ${msg.color}">
+          ${msg.avatar}
+        </div>
+        <span class="text-sm font-medium" style="color: ${msg.color}">${msg.user}</span>
+        <span class="text-xs text-gray-500">${msg.time}</span>
+      </div>
+      <div class="ml-8">${sanitize(msg.text)}</div>
+    `;
+    messages.appendChild(item);
+    messages.scrollTop = messages.scrollHeight;
   }
-});
 
-publicChatButton.addEventListener('click', () => {
-  settingsModal.classList.add('hidden');
-  switchToPublicChat();
-});
-
-publicChatButtonTop.addEventListener('click', () => {
-  switchToPublicChat();
-});
-
-changeUsernameButton.addEventListener('click', () => {
-  const newUsername = changeUsernameInput.value.trim();
-  if (newUsername) {
-    username = newUsername;
-    localStorage.setItem('username', newUsername);
-    socket.emit('username changed', newUsername);
-    logChatMessage(`Username changed to ${newUsername}`);
-    settingsModal.classList.add('hidden');
+  function logChatMessage(text) {
+    const item = document.createElement('div');
+    item.innerHTML = `<div class="text-gray-500 text-sm italic">${text}</div>`;
+    messages.appendChild(item);
+    messages.scrollTop = messages.scrollHeight;
   }
-});
 
-function switchToPublicChat() {
-  privateRecipient = null;
-  logChatMessage('Switched to public chat');
-  chatType.textContent = 'Public Chat';
-  currentChatWith.textContent = 'No one';
-}
+  function logPrivateMessage(text) {
+    const item = document.createElement('div');
+    item.innerHTML = `
+      <div class="bg-blue-100 p-2 rounded-md">
+        <strong>Private to ${privateRecipient}:</strong> ${sanitize(text)}
+      </div>
+    `;
+    messages.appendChild(item);
+    messages.scrollTop = messages.scrollHeight;
+  }
 
-function logChatMessage(message) {
-  const logItem = document.createElement('div');
-  logItem.innerHTML = `
-    <div class="text-xs text-gray-500 italic p-2">
-      ${message}
-    </div>
-  `;
-  messages.appendChild(logItem);
-  messages.scrollTop = messages.scrollHeight;
-}
-
-function logPrivateMessage(message) {
-  const logItem = document.createElement('div');
-  logItem.innerHTML = `
-    <div class="text-xs text-gray-500 italic p-2">
-      You sent to ${privateRecipient}: ${message}
-    </div>
-  `;
-  messages.appendChild(logItem);
-  messages.scrollTop = messages.scrollHeight;
-}
+  function sanitize(str) {
+    const temp = document.createElement('div');
+    temp.textContent = str;
+    return temp.innerHTML;
+  }
