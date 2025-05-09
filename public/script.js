@@ -1,6 +1,11 @@
 const socket = io();
 let privateRecipient = null;
 
+const chatUI = document.getElementById('chat-ui');
+const usernameScreen = document.getElementById('username-screen');
+const usernameInput = document.getElementById('username-input');
+const enterChatBtn = document.getElementById('enter-chat-btn');
+
 const input = document.getElementById('message-input');
 const sendButton = document.getElementById('send-btn');
 const messages = document.getElementById('messages');
@@ -22,27 +27,33 @@ const closeSettingsButton = document.getElementById('close-settings-btn');
 const changeUsernameInput = document.getElementById('change-username-input');
 const changeUsernameButton = document.getElementById('change-username-btn');
 const onlineUsersList = document.getElementById('online-users');
+
 const typingIndicator = document.createElement('div');
 typingIndicator.classList.add('text-sm', 'text-gray-500');
 messages.appendChild(typingIndicator);
 
-let username = localStorage.getItem('username');
-if (!username) {
-  username = prompt("Enter your username:");
-  if (!username) username = "Anonymous";
-  localStorage.setItem('username', username);
-}
+let username;
 
-const color = "#" + Math.floor(Math.random() * 16777215).toString(16);
-const avatar = username[0].toUpperCase();
-socket.emit('new user', username, color, avatar);
+// Handle login
+enterChatBtn.addEventListener('click', () => {
+  const enteredUsername = usernameInput.value.trim();
+  if (enteredUsername) {
+    username = enteredUsername;
+    localStorage.setItem('username', username);
+    const color = "#" + Math.floor(Math.random() * 16777215).toString(16);
+    const avatar = username[0].toUpperCase();
+    socket.emit('new user', username, color, avatar);
+    usernameScreen.classList.add('hidden');
+    chatUI.classList.remove('hidden');
+  }
+});
 
 sendButton.addEventListener('click', (e) => {
   e.preventDefault();
   if (input.value.trim()) {
     if (privateRecipient) {
       socket.emit('private message', { recipient: privateRecipient, message: input.value });
-      logPrivateMessage(input.value); // Log private message sent
+      logPrivateMessage(input.value);
     } else {
       socket.emit('chat message', input.value);
     }
@@ -88,9 +99,9 @@ socket.on('typing', data => {
 });
 
 socket.on('update users', users => {
-  onlineUsersList.innerHTML = ''; // Clear the list of users
+  onlineUsersList.innerHTML = '';
   users.forEach(user => {
-    if (user.username === username) return; // Skip the current user
+    if (user.username === username) return;
 
     const userItem = document.createElement('li');
     userItem.classList.add('relative', 'group');
@@ -99,15 +110,13 @@ socket.on('update users', users => {
         ${user.username}
       </button>
     `;
-
     const nameBtn = userItem.querySelector('button');
     nameBtn.addEventListener('click', () => {
-      privateRecipient = user.username; // Set the private recipient to the clicked user's username
-      logChatMessage(`Started private chat with ${user.username}`); // Log the start of the private chat
-      chatType.textContent = 'Private Chat'; // Change chat type to private
-      currentChatWith.textContent = privateRecipient; // Display the private recipient
+      privateRecipient = user.username;
+      logChatMessage(`Started private chat with ${user.username}`);
+      chatType.textContent = 'Private Chat';
+      currentChatWith.textContent = privateRecipient;
     });
-
     onlineUsersList.appendChild(userItem);
   });
 });
@@ -135,21 +144,14 @@ closeSettingsButton.addEventListener('click', () => {
 startPrivateChatButton.addEventListener('click', () => {
   privateRecipient = privateChatInput.value.trim();
   if (privateRecipient) {
-    logChatMessage(`Started private chat with ${privateRecipient}`); // Log the start of the private chat
+    logChatMessage(`Started private chat with ${privateRecipient}`);
     settingsModal.classList.add('hidden');
     chatType.textContent = 'Private Chat';
     currentChatWith.textContent = privateRecipient;
   } else {
-    logChatMessage('Please enter a valid username'); // Log the message asking for valid username
+    logChatMessage('Please enter a valid username');
   }
 });
-
-function switchToPublicChat() {
-  privateRecipient = null;
-  logChatMessage('Switched to public chat'); // Log the switch to public chat
-  chatType.textContent = 'Public Chat';
-  currentChatWith.textContent = 'No one';
-}
 
 publicChatButton.addEventListener('click', () => {
   settingsModal.classList.add('hidden');
@@ -166,12 +168,18 @@ changeUsernameButton.addEventListener('click', () => {
     username = newUsername;
     localStorage.setItem('username', newUsername);
     socket.emit('username changed', newUsername);
-    logChatMessage(`Username changed to ${newUsername}`); // Log the username change in the chat
+    logChatMessage(`Username changed to ${newUsername}`);
     settingsModal.classList.add('hidden');
   }
 });
 
-// Function to log general chat messages
+function switchToPublicChat() {
+  privateRecipient = null;
+  logChatMessage('Switched to public chat');
+  chatType.textContent = 'Public Chat';
+  currentChatWith.textContent = 'No one';
+}
+
 function logChatMessage(message) {
   const logItem = document.createElement('div');
   logItem.innerHTML = `
@@ -183,7 +191,6 @@ function logChatMessage(message) {
   messages.scrollTop = messages.scrollHeight;
 }
 
-// Function to log private messages with the recipient's name
 function logPrivateMessage(message) {
   const logItem = document.createElement('div');
   logItem.innerHTML = `
