@@ -40,7 +40,7 @@ const allowedNames = [
   "Adela", "Nathaniel", "Noah", "Stefan", "Michael", "Adam", "Nicholas",
   "Samuel", "Jonah", "Amber", "Annie", "Conor", "Christopher", "Seneca",
   "Magnus", "Jace", "Martin", "Daehan", "Charles", "Ava",
-  "Dexter", "Charlie", "Nick", "Sam", "Nate", "Aleksander", "Alek"
+  "Dexter", "Charlie", "Nick", "Sam", "Nate", "Aleksander", "Alek", "Eli"
 ];
 
 // ✅ Capitalize helper
