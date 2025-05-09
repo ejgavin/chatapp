@@ -1,29 +1,33 @@
 const express = require('express');
 const http = require('http');
-const socketIo = require('socket.io');
+const { Server } = require('socket.io'); // use this import style
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+
+// Create Socket.IO server with CORS support
+const io = new Server(server, {
+  cors: {
+    origin: '*', // Allow all origins for development
+    methods: ['GET', 'POST'],
+  }
+});
 
 const users = [];
 
-// Serve static files (your client-side code)
+// Serve static files (your HTML/CSS/JS should be in ./public)
 app.use(express.static('public'));
 
-// When a new user connects
+// Socket.IO connection
 io.on('connection', (socket) => {
-  console.log('A user connected: ' + socket.id);
+  console.log('✅ A user connected: ' + socket.id);
 
-  // Handle new user joining and sending their username, color, and avatar
+  // New user joins
   socket.on('new user', (username, color, avatar) => {
-    // Add user to the online users list
     users.push({ username, socketId: socket.id, color, avatar });
 
-    // Emit the updated users list to all connected clients
     io.emit('update users', users);
 
-    // Send a welcome message to the new user
     socket.emit('chat message', {
       user: 'Server',
       text: `Welcome, ${username}!`,
@@ -33,68 +37,65 @@ io.on('connection', (socket) => {
     });
   });
 
-  // Handle private message from a user
-  socket.on('private message', (data) => {
-    const sender = users.find((user) => user.socketId === socket.id);  // Get sender by socketId
-    const recipientSocket = users.find((user) => user.username === data.recipient);
+  // Public chat message
+  socket.on('chat message', (message) => {
+    const user = users.find(u => u.socketId === socket.id);
+    io.emit('chat message', {
+      user: user?.username || 'Anonymous',
+      text: message,
+      color: user?.color || '#000000',
+      avatar: user?.avatar || 'A',
+      time: new Date().toLocaleTimeString(),
+    });
+  });
 
-    if (recipientSocket && sender) {
-      // Send the private message to the recipient
-      io.to(recipientSocket.socketId).emit('private message', {
-        user: sender.username,  // Use sender's username
-        text: data.message,
+  // Private message
+  socket.on('private message', (data) => {
+    const sender = users.find(u => u.socketId === socket.id);
+    const recipient = users.find(u => u.username === data.recipient);
+    if (recipient && sender) {
+      io.to(recipient.socketId).emit('private message', {
+        user: sender.username,
+        text: data.message
       });
     } else {
-      // If recipient doesn't exist or sender is not found
       socket.emit('error', `User ${data.recipient} not found`);
     }
   });
 
-  // Handle sending a public message to all users
-  socket.on('chat message', (message) => {
-    const user = users.find(u => u.socketId === socket.id);
-    const time = new Date().toLocaleTimeString();
-    io.emit('chat message', {
-      user: user ? user.username : 'Anonymous',
-      text: message,
-      color: user ? user.color : '#000000',
-      avatar: user ? user.avatar : 'A',
-      time,
-    });
-  });
-
-  // Handle typing event to show if a user is typing
+  // Typing event
   socket.on('typing', (isTyping) => {
     const user = users.find(u => u.socketId === socket.id);
     if (user) {
       socket.broadcast.emit('typing', {
         user: user.username,
-        isTyping,
+        isTyping
       });
     }
   });
 
-  // Handle user disconnecting
-  socket.on('disconnect', () => {
-    const index = users.findIndex((user) => user.socketId === socket.id);
-    if (index !== -1) {
-      const user = users.splice(index, 1)[0];
-      console.log(`${user.username} disconnected`);
-      io.emit('update users', users); // Update the user list
+  // Username change
+  socket.on('username changed', (newUsername) => {
+    const user = users.find(u => u.socketId === socket.id);
+    if (user) {
+      user.username = newUsername;
+      io.emit('update users', users);
     }
   });
 
-  // Handle username change event
-  socket.on('username changed', (newUsername) => {
-    const userIndex = users.findIndex(u => u.socketId === socket.id);
-    if (userIndex !== -1) {
-      users[userIndex].username = newUsername;
-      io.emit('update users', users); // Broadcast updated user list
+  // Disconnect
+  socket.on('disconnect', () => {
+    const index = users.findIndex(u => u.socketId === socket.id);
+    if (index !== -1) {
+      const [user] = users.splice(index, 1);
+      console.log(`❌ ${user.username} disconnected`);
+      io.emit('update users', users);
     }
   });
 });
 
-// Start the server
-server.listen(3000, () => {
-  console.log('Server running on port 3000');
+// Start server
+const PORT = 3000;
+server.listen(PORT, () => {
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
