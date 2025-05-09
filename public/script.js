@@ -1,4 +1,4 @@
-const socket = io();
+const socket = io(); // Ensure that the socket is correctly initialized
 let privateRecipient = null;
 
 const chatUI = document.getElementById('chat-ui');
@@ -159,4 +159,14 @@ socket.on('online users', (users) => {
     userElement.textContent = user;
     onlineUsersList.appendChild(userElement);
   });
+});
+
+// Handle socket connection issues
+socket.on('connect_error', (err) => {
+  console.error('Socket connection failed:', err);
+  alert('Connection to the server failed. Please try again later.');
+});
+
+socket.on('disconnect', () => {
+  console.log('Disconnected from server');
 });
