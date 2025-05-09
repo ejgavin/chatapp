@@ -32,6 +32,11 @@ const typingIndicator = document.createElement('div');
 typingIndicator.classList.add('text-sm', 'text-gray-500', 'mt-2');
 input.parentElement.insertBefore(typingIndicator, input);
 
+// New error message element
+const errorMessageElement = document.createElement('div');
+errorMessageElement.classList.add('text-red-500', 'mt-2');
+usernameScreen.appendChild(errorMessageElement);
+
 let username = localStorage.getItem('username') || '';
 
 // List of allowed usernames
@@ -60,8 +65,10 @@ function enterChat() {
   const capitalizedUsername = capitalizeFirstLetter(enteredUsername);
 
   if (!allowedNames.includes(capitalizedUsername)) {
-    alert('This username is not allowed. Please choose another one.');
+    errorMessageElement.textContent = 'Use your real name please.';
     return;
+  } else {
+    errorMessageElement.textContent = '';  // Clear error if username is valid
   }
 
   if (enteredUsername) {
@@ -245,24 +252,27 @@ function displayMessage(msg) {
 
 function logChatMessage(text) {
   const item = document.createElement('div');
-  item.innerHTML = `<div class="text-gray-500 text-sm italic">${text}</div>`;
+  item.innerHTML = `<div class="text-gray-500 italic">${text}</div>`;
   messages.appendChild(item);
   messages.scrollTop = messages.scrollHeight;
 }
 
 function logPrivateMessage(text) {
   const item = document.createElement('div');
-  item.innerHTML = `
-    <div class="bg-blue-100 p-2 rounded-md">
-      <strong>Private to ${privateRecipient}:</strong> ${sanitize(text)}
-    </div>
-  `;
+  item.innerHTML = `<div class="text-gray-500 italic">Private: ${text}</div>`;
   messages.appendChild(item);
   messages.scrollTop = messages.scrollHeight;
 }
 
-function sanitize(str) {
-  const temp = document.createElement('div');
-  temp.textContent = str;
-  return temp.innerHTML;
+function sanitize(input) {
+  const element = document.createElement('div');
+  if (input) {
+    element.innerText = input;
+    return element.innerHTML;
+  }
+  return '';
 }
+
+socket.on('error', (message) => {
+  alert(`Error: ${message}`);
+});
