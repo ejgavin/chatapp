@@ -15,6 +15,7 @@
     <h1 class="text-2xl font-bold mb-4">Enter Your Username</h1>
     <input id="username-input" type="text" placeholder="Username" class="p-2 border rounded mb-4 w-64" />
     <button id="enter-chat-btn" class="bg-blue-500 text-white px-6 py-2 rounded">Enter Chat</button>
+    <div id="error-message" class="text-red-500 mt-2 hidden">You must use your real name!</div>
   </div>
 
   <!-- Main Chat UI -->
@@ -43,7 +44,7 @@
       <!-- Message Display Area -->
       <div id="messages" class="space-y-2 h-96 overflow-y-auto p-2 border rounded bg-white mb-4 relative">
         <!-- Typing Indicator -->
-        <div id="typing-indicator" class="text-sm text-gray-500 absolute bottom-0 left-0 w-full px-2 py-1 bg-white"></div>
+        <div id="typing-indicator" class="text-sm text-gray-500 absolute bottom-12 left-0 w-full px-2 py-1 bg-white"></div>
       </div>
 
       <!-- Input + Emoji Area -->

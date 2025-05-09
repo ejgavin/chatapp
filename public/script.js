@@ -34,6 +34,20 @@ messages.appendChild(typingIndicator);
 
 let username = localStorage.getItem('username') || '';
 
+// List of allowed usernames
+const allowedNames = [
+  "Emiliano", "Fiona", "Eliot", "Krishay", "Channing", "Anna", "Mayla",
+  "Adela", "Nathaniel", "Noah", "Stefan", "Michael", "Adam", "Nicholas",
+  "Samuel", "Jonah", "Amber", "Annie", "Conor", "Christopher", "Seneca",
+  "Magnus", "Jace", "Martin", "Daehan", "Charles", "Ava",
+  "Dexter", "Charlie", "Nick", "Sam", "Nate", "Aleksander", "Alek", "Eli"
+];
+
+// ✅ Capitalize helper
+function capitalizeFirstLetter(name) {
+  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+}
+
 function getRandomColor() {
   let color;
   do {
@@ -44,6 +58,13 @@ function getRandomColor() {
 
 function enterChat() {
   const enteredUsername = usernameInput.value.trim();
+
+  // Check if the entered username is allowed
+  if (!allowedNames.includes(capitalizeFirstLetter(enteredUsername))) {
+    alert('This username is not allowed. Please choose another one.');
+    return;
+  }
+
   if (enteredUsername) {
     username = enteredUsername;
     localStorage.setItem('username', username);
@@ -187,6 +208,13 @@ publicChatButtonTop.addEventListener('click', () => {
 
 changeUsernameButton.addEventListener('click', () => {
   const newUsername = changeUsernameInput.value.trim();
+
+  // Check if the new username is allowed
+  if (!allowedNames.includes(capitalizeFirstLetter(newUsername))) {
+    alert('This username is not allowed. Please choose another one.');
+    return;
+  }
+
   if (newUsername) {
     socket.emit('username changed', newUsername);
     username = newUsername;
