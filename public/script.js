@@ -28,9 +28,11 @@ const changeUsernameInput = document.getElementById('change-username-input');
 const changeUsernameButton = document.getElementById('change-username-btn');
 const onlineUsersList = document.getElementById('online-users');
 
+// Typing Indicator
 const typingIndicator = document.createElement('div');
 typingIndicator.classList.add('text-sm', 'text-gray-500');
-messages.appendChild(typingIndicator);
+const typingArea = document.getElementById('typing-area');  // This is the new container where we place the indicator
+typingArea.appendChild(typingIndicator);
 
 let username = localStorage.getItem('username') || '';
 
@@ -251,19 +253,10 @@ function logChatMessage(text) {
   messages.scrollTop = messages.scrollHeight;
 }
 
-function logPrivateMessage(text) {
-  const item = document.createElement('div');
-  item.innerHTML = `
-    <div class="bg-blue-100 p-2 rounded-md">
-      <strong>Private to ${privateRecipient}:</strong> ${sanitize(text)}
-    </div>
-  `;
-  messages.appendChild(item);
-  messages.scrollTop = messages.scrollHeight;
+function sanitize(text) {
+  const element = document.createElement('div');
+  element.innerText = text;
+  return element.innerHTML;
 }
 
-function sanitize(str) {
-  const temp = document.createElement('div');
-  temp.textContent = str;
-  return temp.innerHTML;
-}
+socket.emit('chat history');
