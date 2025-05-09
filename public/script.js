@@ -14,6 +14,7 @@ const emojiContainer = document.getElementById('emoji-container');
 const emojiPicker = emojiContainer.querySelector('emoji-picker');
 const closeEmojiBtn = document.getElementById('close-emoji-btn');
 
+const chatInfo = document.getElementById('chat-info');
 const chatType = document.getElementById('chat-type');
 const currentChatWith = document.getElementById('current-chat-with');
 const settingsBtn = document.getElementById('settings-btn');
@@ -26,7 +27,10 @@ const closeSettingsButton = document.getElementById('close-settings-btn');
 const changeUsernameInput = document.getElementById('change-username-input');
 const changeUsernameButton = document.getElementById('change-username-btn');
 const onlineUsersList = document.getElementById('online-users');
-const typingIndicator = document.getElementById('typing-indicator');
+
+const typingIndicator = document.createElement('div');
+typingIndicator.classList.add('text-sm', 'text-gray-500');
+messages.appendChild(typingIndicator);
 
 let username = localStorage.getItem('username') || '';
 
@@ -36,12 +40,6 @@ function getRandomColor() {
     color = "#" + Math.floor(Math.random() * 16777215).toString(16);
   } while (color.toLowerCase() === "#ffffff");
   return color;
-}
-
-function sanitize(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
 }
 
 function enterChat() {
@@ -92,10 +90,14 @@ input.addEventListener('input', () => {
 });
 
 socket.on('chat history', (history) => {
-  history.forEach(msg => displayMessage(msg));
+  history.forEach(msg => {
+    displayMessage(msg);
+  });
 });
 
-socket.on('chat message', msg => displayMessage(msg));
+socket.on('chat message', msg => {
+  displayMessage(msg);
+});
 
 socket.on('private message', msg => {
   const item = document.createElement('div');
@@ -126,7 +128,8 @@ socket.on('update users', users => {
         ${user.username}
       </button>
     `;
-    userItem.querySelector('button').addEventListener('click', () => {
+    const nameBtn = userItem.querySelector('button');
+    nameBtn.addEventListener('click', () => {
       privateRecipient = user.username;
       logChatMessage(`Started private chat with ${user.username}`);
       chatType.textContent = 'Private Chat';
@@ -205,8 +208,9 @@ function displayMessage(msg) {
         ${msg.avatar}
       </div>
       <span class="text-sm font-medium" style="color: ${msg.color}">${msg.user}</span>
-      <span class="text-sm">${sanitize(msg.text)}</span>
+      <span class="text-xs text-gray-500">${msg.time}</span>
     </div>
+    <div class="ml-8">${sanitize(msg.text)}</div>
   `;
   messages.appendChild(item);
   messages.scrollTop = messages.scrollHeight;
@@ -214,8 +218,7 @@ function displayMessage(msg) {
 
 function logChatMessage(text) {
   const item = document.createElement('div');
-  item.classList.add('text-sm', 'text-gray-600', 'italic');
-  item.textContent = text;
+  item.innerHTML = `<div class="text-gray-500 text-sm italic">${text}</div>`;
   messages.appendChild(item);
   messages.scrollTop = messages.scrollHeight;
 }
@@ -223,10 +226,16 @@ function logChatMessage(text) {
 function logPrivateMessage(text) {
   const item = document.createElement('div');
   item.innerHTML = `
-    <div class="bg-blue-100 p-2 rounded-md text-right">
-      <strong>You: </strong>${sanitize(text)}
+    <div class="bg-blue-100 p-2 rounded-md">
+      <strong>Private to ${privateRecipient}:</strong> ${sanitize(text)}
     </div>
   `;
   messages.appendChild(item);
   messages.scrollTop = messages.scrollHeight;
+}
+
+function sanitize(str) {
+  const temp = document.createElement('div');
+  temp.textContent = str;
+  return temp.innerHTML;
 }
