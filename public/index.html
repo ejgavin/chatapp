@@ -34,15 +34,12 @@
         </div>
       </div>
 
-      <!-- Chat Info -->
       <div id="chat-info" class="text-sm text-gray-500 mb-2">
         <span id="chat-type">Public Chat</span> | <span id="current-chat-with">No one</span>
       </div>
 
-      <!-- Message Display Area -->
       <div id="messages" class="space-y-2 h-96 overflow-y-auto p-2 border rounded bg-white mb-4"></div>
 
-      <!-- Input + Emoji Area -->
       <div class="mt-4 flex space-x-2 relative">
         <input id="message-input" type="text" class="p-2 flex-1 border rounded" placeholder="Type a message..." />
         <button id="emoji-btn" class="bg-gray-300 p-2 rounded">🙂</button>
@@ -55,7 +52,6 @@
         </div>
       </div>
 
-      <!-- Typing Indicator -->
       <div id="typing-indicator" class="text-sm text-gray-500 mt-1 h-5"></div>
 
       <!-- Settings Modal -->
@@ -104,29 +100,34 @@
     const googleSigninBtn = document.getElementById("google-signin");
     const logoutBtn = document.getElementById("logout-btn");
 
-    // Persist login across sessions
-    setPersistence(auth, browserLocalPersistence);
+    // Ensure persistence is set before checking auth
+    setPersistence(auth, browserLocalPersistence).then(() => {
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          loginScreen.classList.add("hidden");
+          chatUI.classList.remove("hidden");
+          window.username = user.displayName;
+        } else {
+          loginScreen.classList.remove("hidden");
+          chatUI.classList.add("hidden");
+        }
+      });
+    }).catch(console.error);
 
-    // Sign in
-    googleSigninBtn.onclick = () => {
-      signInWithPopup(auth, provider).catch(console.error);
-    };
+    // Sign in handler
+    googleSigninBtn.addEventListener("click", async () => {
+      try {
+        console.log("Signing in...");
+        await signInWithPopup(auth, provider);
+      } catch (error) {
+        console.error("Sign-in error:", error);
+        alert("Sign-in failed: " + error.message);
+      }
+    });
 
     // Sign out
-    logoutBtn.onclick = () => {
-      signOut(auth);
-    };
-
-    // Auth state change
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        loginScreen.classList.add("hidden");
-        chatUI.classList.remove("hidden");
-        window.username = user.displayName; // Set for use in your chat logic
-      } else {
-        loginScreen.classList.remove("hidden");
-        chatUI.classList.add("hidden");
-      }
+    logoutBtn.addEventListener("click", () => {
+      signOut(auth).catch(console.error);
     });
   </script>
 
