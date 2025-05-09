@@ -28,15 +28,10 @@ const changeUsernameInput = document.getElementById('change-username-input');
 const changeUsernameButton = document.getElementById('change-username-btn');
 const onlineUsersList = document.getElementById('online-users');
 
-// Typing Indicator
-const typingIndicator = document.createElement('div');
-typingIndicator.classList.add('text-sm', 'text-gray-500');
-const typingArea = document.getElementById('typing-area');  // This is the new container where we place the indicator
-typingArea.appendChild(typingIndicator);
+const typingIndicator = document.getElementById('typing-indicator');
 
 let username = localStorage.getItem('username') || '';
 
-// List of allowed usernames
 const allowedNames = [
   "Emiliano", "Fiona", "Eliot", "Krishay", "Channing", "Anna", "Mayla",
   "Adela", "Nathaniel", "Noah", "Stefan", "Michael", "Adam", "Nicholas",
@@ -45,7 +40,6 @@ const allowedNames = [
   "Dexter", "Charlie", "Nick", "Sam", "Nate", "Aleksander", "Alek", "Eli"
 ];
 
-// ✅ Capitalize helper
 function capitalizeFirstLetter(name) {
   return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
 }
@@ -61,7 +55,6 @@ function getRandomColor() {
 function enterChat() {
   const enteredUsername = usernameInput.value.trim();
 
-  // Check if the entered username is allowed
   if (!allowedNames.includes(capitalizeFirstLetter(enteredUsername))) {
     alert('This username is not allowed. Please choose another one.');
     return;
@@ -211,7 +204,6 @@ publicChatButtonTop.addEventListener('click', () => {
 changeUsernameButton.addEventListener('click', () => {
   const newUsername = changeUsernameInput.value.trim();
 
-  // Check if the new username is allowed
   if (!allowedNames.includes(capitalizeFirstLetter(newUsername))) {
     alert('This username is not allowed. Please choose another one.');
     return;
@@ -253,10 +245,19 @@ function logChatMessage(text) {
   messages.scrollTop = messages.scrollHeight;
 }
 
-function sanitize(text) {
-  const element = document.createElement('div');
-  element.innerText = text;
-  return element.innerHTML;
+function logPrivateMessage(text) {
+  const item = document.createElement('div');
+  item.innerHTML = `
+    <div class="bg-blue-100 p-2 rounded-md">
+      <strong>Private to ${privateRecipient}:</strong> ${sanitize(text)}
+    </div>
+  `;
+  messages.appendChild(item);
+  messages.scrollTop = messages.scrollHeight;
 }
 
-socket.emit('chat history');
+function sanitize(str) {
+  const temp = document.createElement('div');
+  temp.textContent = str;
+  return temp.innerHTML;
+}
