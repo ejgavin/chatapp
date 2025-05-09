@@ -125,79 +125,38 @@ emojiPicker.addEventListener('emoji-click', (e) => {
   input.focus();
 });
 
-// ✅ Saving user state after first login
-if (username) {
-  const color = getRandomColor();
-  const avatar = username[0].toUpperCase();
-  socket.emit('new user', username, color, avatar);
-  usernameScreen.classList.add('hidden');
-  chatUI.classList.remove('hidden');
-}
-
-// Handle receiving chat messages
 socket.on('chat message', (msg, username, color, avatar) => {
   const messageElement = document.createElement('div');
   messageElement.classList.add('p-2', 'rounded', 'bg-gray-200', 'mb-2');
   messageElement.style.color = color;
   messageElement.innerHTML = `
     <span class="font-semibold">${avatar}</span>
-    <span class="font-medium">${username}</span>: ${sanitize(msg)}
+    <span class="font-bold">${username}:</span> ${msg}
   `;
   messages.appendChild(messageElement);
+
   if (isUserNearBottom()) scrollToBottom();
 });
 
-// Handle typing indicator
-socket.on('typing', (data) => {
-  typingIndicator.textContent = data.isTyping ? `${data.user} is typing...` : '';
-  chatType.textContent = privateRecipient ? 'Private Chat' : 'Public Chat';
-  currentChatWith.textContent = privateRecipient ? privateRecipient : 'No one';
+socket.on('private message', (msg, username, color, avatar) => {
+  const messageElement = document.createElement('div');
+  messageElement.classList.add('p-2', 'rounded', 'bg-gray-200', 'mb-2');
+  messageElement.style.color = color;
+  messageElement.innerHTML = `
+    <span class="font-semibold">${avatar}</span>
+    <span class="font-bold">${username}:</span> ${msg}
+  `;
+  messages.appendChild(messageElement);
+
+  if (isUserNearBottom()) scrollToBottom();
 });
 
-// Manage online users
-socket.on('update users', (users) => {
+// Online Users update
+socket.on('online users', (users) => {
   onlineUsersList.innerHTML = '';
-  users.forEach(user => {
-    if (user.username === username) return;
-
-    const userItem = document.createElement('li');
-    userItem.classList.add('relative', 'group');
-    userItem.innerHTML = `
-      <button class="text-blue-600 underline hover:text-blue-800" data-username="${user.username}">
-        ${user.username}
-      </button>
-    `;
-    const nameBtn = userItem.querySelector('button');
-    nameBtn.addEventListener('click', () => {
-      privateRecipient = user.username;
-      logChatMessage(`Started private chat with ${user.username}`);
-      chatType.textContent = 'Private Chat';
-      currentChatWith.textContent = privateRecipient;
-    });
-    onlineUsersList.appendChild(userItem);
+  users.forEach((user) => {
+    const userElement = document.createElement('li');
+    userElement.textContent = user;
+    onlineUsersList.appendChild(userElement);
   });
 });
-
-function logChatMessage(text) {
-  const item = document.createElement('div');
-  item.innerHTML = `<div class="text-gray-500 text-sm italic">${text}</div>`;
-  messages.appendChild(item);
-  messages.scrollTop = messages.scrollHeight;
-}
-
-function logPrivateMessage(text) {
-  const item = document.createElement('div');
-  item.innerHTML = `
-    <div class="bg-blue-100 p-2 rounded-md">
-      <strong>Private to ${privateRecipient}:</strong> ${sanitize(text)}
-    </div>
-  `;
-  messages.appendChild(item);
-  messages.scrollTop = messages.scrollHeight;
-}
-
-function sanitize(str) {
-  const temp = document.createElement('div');
-  temp.textContent = str;
-  return temp.innerHTML;
-}
