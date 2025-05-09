@@ -34,6 +34,20 @@ messages.appendChild(typingIndicator);
 
 let username = localStorage.getItem('username') || '';
 
+// ✅ Allowed names list
+const allowedNames = [
+  "Emiliano", "Fiona", "Eliot", "Krishay", "Channing", "Anna", "Mayla",
+  "Adela", "Nathaniel", "Noah", "Stefan", "Michael", "Adam", "Nicholas",
+  "Samuel", "Jonah", "Amber", "Annie", "Conor", "Christopher", "Seneca",
+  "Magnus", "Jace", "Martin", "Daehan", "Charles", "Ava",
+  "Dexter", "Charlie", "Nick", "Sam", "Nate", "Aleksander", "Alek"
+];
+
+// ✅ Capitalize helper
+function capitalizeFirstLetter(name) {
+  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+}
+
 function getRandomColor() {
   let color;
   do {
@@ -42,17 +56,24 @@ function getRandomColor() {
   return color;
 }
 
+// ✅ Updated enterChat function with allowedNames restriction
 function enterChat() {
-  const enteredUsername = usernameInput.value.trim();
-  if (enteredUsername) {
-    username = enteredUsername;
-    localStorage.setItem('username', username);
-    const color = getRandomColor();
-    const avatar = username[0].toUpperCase();
-    socket.emit('new user', username, color, avatar);
-    usernameScreen.classList.add('hidden');
-    chatUI.classList.remove('hidden');
+  const inputVal = usernameInput.value.trim();
+  const capitalized = capitalizeFirstLetter(inputVal);
+
+  if (!allowedNames.includes(capitalized)) {
+    alert("Access denied. Please enter a valid first name.");
+    return;
   }
+
+  username = capitalized;
+  localStorage.setItem('username', username);
+  const color = getRandomColor();
+  const avatar = username[0].toUpperCase();
+  socket.emit('new user', username, color, avatar);
+
+  usernameScreen.classList.add('hidden');
+  chatUI.classList.remove('hidden');
 }
 
 enterChatBtn.addEventListener('click', enterChat);
@@ -61,17 +82,16 @@ usernameInput.addEventListener('keypress', (e) => {
 });
 
 function sendMessage() {
-  const message = input.value.trim();
-  if (!message) return;
-
-  if (privateRecipient) {
-    socket.emit('private message', { recipient: privateRecipient, message });
-    logPrivateMessage(message);
-  } else {
-    socket.emit('chat message', message);
+  if (input.value.trim()) {
+    if (privateRecipient) {
+      socket.emit('private message', { recipient: privateRecipient, message: input.value });
+      logPrivateMessage(input.value);
+    } else {
+      socket.emit('chat message', input.value);
+    }
+    socket.emit('typing', false);
+    input.value = '';
   }
-  socket.emit('typing', false);
-  input.value = '';
 }
 
 sendButton.addEventListener('click', (e) => {
@@ -91,10 +111,14 @@ input.addEventListener('input', () => {
 });
 
 socket.on('chat history', (history) => {
-  history.forEach(displayMessage);
+  history.forEach(msg => {
+    displayMessage(msg);
+  });
 });
 
-socket.on('chat message', displayMessage);
+socket.on('chat message', msg => {
+  displayMessage(msg);
+});
 
 socket.on('private message', msg => {
   const item = document.createElement('div');
@@ -110,7 +134,7 @@ socket.on('private message', msg => {
 socket.on('typing', data => {
   typingIndicator.textContent = data.isTyping ? `${data.user} is typing...` : '';
   chatType.textContent = privateRecipient ? 'Private Chat' : 'Public Chat';
-  currentChatWith.textContent = privateRecipient || 'No one';
+  currentChatWith.textContent = privateRecipient ? privateRecipient : 'No one';
 });
 
 socket.on('update users', users => {
@@ -157,10 +181,9 @@ closeSettingsButton.addEventListener('click', () => {
 });
 
 startPrivateChatButton.addEventListener('click', () => {
-  const recipient = privateChatInput.value.trim();
-  if (recipient) {
-    privateRecipient = recipient;
-    logChatMessage(`Started private chat with ${recipient}`);
+  privateRecipient = privateChatInput.value.trim();
+  if (privateRecipient) {
+    logChatMessage(`Started private chat with ${privateRecipient}`);
     settingsModal.classList.add('hidden');
     chatType.textContent = 'Private Chat';
     currentChatWith.textContent = privateRecipient;
@@ -169,28 +192,35 @@ startPrivateChatButton.addEventListener('click', () => {
   }
 });
 
-function switchToPublicChat() {
+publicChatButton.addEventListener('click', () => {
   privateRecipient = null;
   logChatMessage('Switched to public chat.');
   chatType.textContent = 'Public Chat';
   currentChatWith.textContent = 'No one';
-}
+});
 
-publicChatButton.addEventListener('click', switchToPublicChat);
-publicChatButtonTop.addEventListener('click', switchToPublicChat);
+publicChatButtonTop.addEventListener('click', () => {
+  privateRecipient = null;
+  logChatMessage('Switched to public chat.');
+  chatType.textContent = 'Public Chat';
+  currentChatWith.textContent = 'No one';
+});
 
 changeUsernameButton.addEventListener('click', () => {
-  const newUsername = changeUsernameInput.value.trim();
-  if (newUsername) {
-    socket.emit('username changed', newUsername);
-    username = newUsername;
-    localStorage.setItem('username', username);
-    logChatMessage(`Username changed to ${newUsername}`);
-    changeUsernameInput.value = '';
-    settingsModal.classList.add('hidden');
-  } else {
-    logChatMessage('Please enter a valid new username.');
+  const newUsernameRaw = changeUsernameInput.value.trim();
+  const newUsername = capitalizeFirstLetter(newUsernameRaw);
+
+  if (!allowedNames.includes(newUsername)) {
+    logChatMessage('Invalid name. You may not use this name.');
+    return;
   }
+
+  socket.emit('username changed', newUsername);
+  username = newUsername;
+  localStorage.setItem('username', username);
+  logChatMessage(`Username changed to ${newUsername}`);
+  changeUsernameInput.value = '';
+  settingsModal.classList.add('hidden');
 });
 
 function displayMessage(msg) {
