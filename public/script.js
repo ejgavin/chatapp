@@ -5,6 +5,7 @@ const chatUI = document.getElementById('chat-ui');
 const usernameScreen = document.getElementById('username-screen');
 const usernameInput = document.getElementById('username-input');
 const enterChatBtn = document.getElementById('enter-chat-btn');
+const errorMessageElement = document.getElementById('error-message'); // For displaying error messages
 
 const input = document.getElementById('message-input');
 const sendButton = document.getElementById('send-btn');
@@ -59,8 +60,11 @@ function enterChat() {
   const enteredUsername = usernameInput.value.trim();
   const capitalizedUsername = capitalizeFirstLetter(enteredUsername);
 
+  // Clear previous error message
+  errorMessageElement.textContent = '';
+
   if (!allowedNames.includes(capitalizedUsername)) {
-    alert('This username is not allowed. Please choose another one.');
+    errorMessageElement.textContent = 'Use your real name please.';
     return;
   }
 
@@ -210,7 +214,7 @@ changeUsernameButton.addEventListener('click', () => {
   const capitalizedUsername = capitalizeFirstLetter(newUsername);
 
   if (!allowedNames.includes(capitalizedUsername)) {
-    alert('This username is not allowed. Please choose another one.');
+    logChatMessage('Use your real name please.');
     return;
   }
 
