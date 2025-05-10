@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const messages = document.getElementById('messages');
   const emojiBtn = document.getElementById('emoji-btn');
   const emojiContainer = document.getElementById('emoji-container');
-  const emojiPicker = emojiContainer.querySelector('emoji-picker');
+  const emojiPicker = emojiContainer ? emojiContainer.querySelector('emoji-picker') : null;
   const closeEmojiBtn = document.getElementById('close-emoji-btn');
 
   const chatInfo = document.getElementById('chat-info');
@@ -65,7 +65,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const capitalizedUsername = capitalizeFirstLetter(enteredUsername);
 
     if (!allowedNames.includes(capitalizedUsername)) {
-      usernameError.textContent = "Please use your own name.";
+      if (usernameError) {
+        usernameError.textContent = "Please use your own name.";
+      }
       return;
     }
 
@@ -75,14 +77,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const color = getRandomColor();
       const avatar = username[0].toUpperCase();
       socket.emit('new user', username, color, avatar);
-      usernameScreen.classList.add('hidden');
-      chatUI.classList.remove('hidden');
-      usernameError.textContent = '';
+      if (usernameScreen) usernameScreen.classList.add('hidden');
+      if (chatUI) chatUI.classList.remove('hidden');
+      if (usernameError) usernameError.textContent = '';
     }
   }
 
-  enterChatBtn.addEventListener('click', enterChat);
-  usernameInput.addEventListener('keypress', (e) => {
+  if (enterChatBtn) enterChatBtn.addEventListener('click', enterChat);
+  if (usernameInput) usernameInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') enterChat();
   });
 
@@ -102,19 +104,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  sendButton.addEventListener('click', (e) => {
+  if (sendButton) sendButton.addEventListener('click', (e) => {
     e.preventDefault();
     sendMessage();
   });
 
-  input.addEventListener('keypress', (e) => {
+  if (input) input.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       sendMessage();
     }
   });
 
-  input.addEventListener('input', () => {
+  if (input) input.addEventListener('input', () => {
     socket.emit('typing', input.value.length > 0);
   });
 
@@ -131,18 +133,18 @@ document.addEventListener('DOMContentLoaded', () => {
         <strong>Private from ${msg.user}: </strong>${sanitize(msg.text)}
       </div>
     `;
-    messages.appendChild(item);
-    messages.scrollTop = messages.scrollHeight;
+    if (messages) messages.appendChild(item);
+    if (messages) messages.scrollTop = messages.scrollHeight;
   });
 
   socket.on('typing', data => {
     typingIndicator.textContent = data.isTyping ? `${data.user} is typing...` : '';
-    chatType.textContent = privateRecipient ? 'Private Chat' : 'Public Chat';
-    currentChatWith.textContent = privateRecipient || 'No one';
+    if (chatType) chatType.textContent = privateRecipient ? 'Private Chat' : 'Public Chat';
+    if (currentChatWith) currentChatWith.textContent = privateRecipient || 'No one';
   });
 
   socket.on('update users', users => {
-    onlineUsersList.innerHTML = '';
+    if (onlineUsersList) onlineUsersList.innerHTML = '';
     users.forEach(user => {
       if (user.username === username) return;
       const userItem = document.createElement('li');
@@ -155,55 +157,55 @@ document.addEventListener('DOMContentLoaded', () => {
       userItem.querySelector('button').addEventListener('click', () => {
         privateRecipient = user.username;
         logChatMessage(`Started private chat with ${user.username}`);
-        chatType.textContent = 'Private Chat';
-        currentChatWith.textContent = privateRecipient;
+        if (chatType) chatType.textContent = 'Private Chat';
+        if (currentChatWith) currentChatWith.textContent = privateRecipient;
       });
-      onlineUsersList.appendChild(userItem);
+      if (onlineUsersList) onlineUsersList.appendChild(userItem);
     });
   });
 
   // Emoji picker
-  emojiBtn.addEventListener('click', () => {
-    emojiContainer.classList.remove('hidden');
+  if (emojiBtn) emojiBtn.addEventListener('click', () => {
+    if (emojiContainer) emojiContainer.classList.remove('hidden');
   });
 
-  emojiPicker.addEventListener('emoji-click', (event) => {
-    input.value += event.detail.unicode;
+  if (emojiPicker) emojiPicker.addEventListener('emoji-click', (event) => {
+    if (input) input.value += event.detail.unicode;
   });
 
-  closeEmojiBtn.addEventListener('click', () => {
-    emojiContainer.classList.add('hidden');
+  if (closeEmojiBtn) closeEmojiBtn.addEventListener('click', () => {
+    if (emojiContainer) emojiContainer.classList.add('hidden');
   });
 
   // Settings
-  settingsBtn.addEventListener('click', () => {
-    settingsModal.classList.remove('hidden');
+  if (settingsBtn) settingsBtn.addEventListener('click', () => {
+    if (settingsModal) settingsModal.classList.remove('hidden');
   });
 
-  closeSettingsButton.addEventListener('click', () => {
-    settingsModal.classList.add('hidden');
+  if (closeSettingsButton) closeSettingsButton.addEventListener('click', () => {
+    if (settingsModal) settingsModal.classList.add('hidden');
   });
 
-  startPrivateChatButton.addEventListener('click', () => {
+  if (startPrivateChatButton) startPrivateChatButton.addEventListener('click', () => {
     privateRecipient = privateChatInput.value.trim();
     if (privateRecipient) {
       logChatMessage(`Started private chat with ${privateRecipient}`);
-      settingsModal.classList.add('hidden');
-      chatType.textContent = 'Private Chat';
-      currentChatWith.textContent = privateRecipient;
+      if (settingsModal) settingsModal.classList.add('hidden');
+      if (chatType) chatType.textContent = 'Private Chat';
+      if (currentChatWith) currentChatWith.textContent = privateRecipient;
     }
   });
 
   [publicChatButton, publicChatButtonTop].forEach(btn => {
-    btn.addEventListener('click', () => {
+    if (btn) btn.addEventListener('click', () => {
       privateRecipient = null;
       logChatMessage('Switched to public chat.');
-      chatType.textContent = 'Public Chat';
-      currentChatWith.textContent = 'No one';
+      if (chatType) chatType.textContent = 'Public Chat';
+      if (currentChatWith) currentChatWith.textContent = 'No one';
     });
   });
 
-  changeUsernameButton.addEventListener('click', () => {
+  if (changeUsernameButton) changeUsernameButton.addEventListener('click', () => {
     const newUsername = changeUsernameInput.value.trim();
     const capitalizedUsername = capitalizeFirstLetter(newUsername);
 
@@ -217,8 +219,8 @@ document.addEventListener('DOMContentLoaded', () => {
       username = capitalizedUsername;
       localStorage.setItem('username', username);
       logChatMessage(`Username changed to ${capitalizedUsername}`);
-      changeUsernameInput.value = '';
-      settingsModal.classList.add('hidden');
+      if (changeUsernameInput) changeUsernameInput.value = '';
+      if (settingsModal) settingsModal.classList.add('hidden');
     }
   });
 
@@ -236,15 +238,15 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
       <div class="ml-8">${sanitize(msg.text)}</div>
     `;
-    messages.appendChild(item);
-    messages.scrollTop = messages.scrollHeight;
+    if (messages) messages.appendChild(item);
+    if (messages) messages.scrollTop = messages.scrollHeight;
   }
 
   function logChatMessage(text) {
     const item = document.createElement('div');
     item.innerHTML = `<div class="text-gray-500 text-sm italic">${text}</div>`;
-    messages.appendChild(item);
-    messages.scrollTop = messages.scrollHeight;
+    if (messages) messages.appendChild(item);
+    if (messages) messages.scrollTop = messages.scrollHeight;
   }
 
   function logPrivateMessage(text) {
@@ -254,8 +256,8 @@ document.addEventListener('DOMContentLoaded', () => {
         <strong>Private to ${privateRecipient}:</strong> ${sanitize(text)}
       </div>
     `;
-    messages.appendChild(item);
-    messages.scrollTop = messages.scrollHeight;
+    if (messages) messages.appendChild(item);
+    if (messages) messages.scrollTop = messages.scrollHeight;
   }
 
   function sanitize(str) {
@@ -272,23 +274,26 @@ document.addEventListener('DOMContentLoaded', () => {
   socket.on('paused', (isPaused) => {
     isChatPaused = isPaused;
     if (isPaused) {
-      pausedChatScreen.classList.remove('hidden');
-      chatUI.classList.add('hidden');
+      if (pausedChatScreen) pausedChatScreen.classList.remove('hidden');
+      if (chatUI) chatUI.classList.add('hidden');
     } else {
-      pausedChatScreen.classList.add('hidden');
-      chatUI.classList.remove('hidden');
+      if (pausedChatScreen) pausedChatScreen.classList.add('hidden');
+      if (chatUI) chatUI.classList.remove('hidden');
     }
   });
 
-  // Admin login
-  adminLoginBtn.addEventListener('click', () => {
+  // Handle admin login
+  if (adminLoginBtn) adminLoginBtn.addEventListener('click', () => {
     const password = adminPasswordInput.value.trim();
-    if (password === 'admin-password') {
-      socket.emit('admin login');
-      adminLoginBtn.classList.add('hidden');
-      submitAdminLoginBtn.classList.remove('hidden');
+    if (password === 'adminpassword') {
+      socket.emit('admin login', true);
+      if (adminLoginError) adminLoginError.textContent = '';
     } else {
-      adminLoginError.textContent = 'Incorrect password';
+      if (adminLoginError) adminLoginError.textContent = 'Invalid password.';
     }
+  });
+
+  socket.on('admin logged in', () => {
+    console.log('Admin logged in');
   });
 });
