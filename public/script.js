@@ -29,12 +29,11 @@ const changeUsernameButton = document.getElementById('change-username-btn');
 const onlineUsersList = document.getElementById('online-users');
 
 const typingIndicator = document.createElement('div');
-typingIndicator.classList.add('text-sm', 'text-gray-500', 'mt-2');
-input.parentElement.insertBefore(typingIndicator, input);
+typingIndicator.classList.add('text-sm', 'text-gray-500', 'mt-2', 'typing-indicator');
+messages.parentElement.insertBefore(typingIndicator, messages.nextSibling);
 
 let username = localStorage.getItem('username') || '';
 
-// List of allowed usernames
 const allowedNames = [
   "Emiliano", "Fiona", "Eliot", "Krishay", "Channing", "Anna", "Mayla",
   "Adela", "Nathaniel", "Noah", "Stefan", "Michael", "Adam", "Nicholas",
@@ -121,10 +120,11 @@ socket.on('chat message', msg => {
 
 socket.on('private message', msg => {
   const item = document.createElement('div');
-  item.innerHTML =
-    `<div class="bg-green-100 p-2 rounded-md">
+  item.innerHTML = `
+    <div class="bg-green-100 p-2 rounded-md">
       <strong>Private from ${msg.user}: </strong>${sanitize(msg.text)}
-    </div>`;
+    </div>
+  `;
   messages.appendChild(item);
   messages.scrollTop = messages.scrollHeight;
 });
@@ -142,10 +142,11 @@ socket.on('update users', users => {
 
     const userItem = document.createElement('li');
     userItem.classList.add('relative', 'group');
-    userItem.innerHTML =
-      `<button class="text-blue-600 underline hover:text-blue-800" data-username="${user.username}">
+    userItem.innerHTML = `
+      <button class="text-blue-600 underline hover:text-blue-800" data-username="${user.username}">
         ${user.username}
-      </button>`;
+      </button>
+    `;
     const nameBtn = userItem.querySelector('button');
     nameBtn.addEventListener('click', () => {
       privateRecipient = user.username;
@@ -227,15 +228,16 @@ changeUsernameButton.addEventListener('click', () => {
 function displayMessage(msg) {
   const item = document.createElement('div');
   item.classList.add('message-item');
-  item.innerHTML =
-    `<div class="flex items-center space-x-2 mb-1">
+  item.innerHTML = `
+    <div class="flex items-center space-x-2 mb-1">
       <div class="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-white text-sm font-bold" style="background-color: ${msg.color}">
         ${msg.avatar}
       </div>
       <span class="text-sm font-medium" style="color: ${msg.color}">${msg.user}</span>
       <span class="text-xs text-gray-500">${msg.time}</span>
     </div>
-    <div class="ml-8">${sanitize(msg.text)}</div>`;
+    <div class="ml-8">${sanitize(msg.text)}</div>
+  `;
   messages.appendChild(item);
   messages.scrollTop = messages.scrollHeight;
 }
@@ -249,10 +251,11 @@ function logChatMessage(text) {
 
 function logPrivateMessage(text) {
   const item = document.createElement('div');
-  item.innerHTML =
-    `<div class="bg-blue-100 p-2 rounded-md">
+  item.innerHTML = `
+    <div class="bg-blue-100 p-2 rounded-md">
       <strong>Private to ${privateRecipient}:</strong> ${sanitize(text)}
-    </div>`;
+    </div>
+  `;
   messages.appendChild(item);
   messages.scrollTop = messages.scrollHeight;
 }
