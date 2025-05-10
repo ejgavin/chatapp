@@ -11,33 +11,30 @@ const io = new Server(server);
 const CHAT_HISTORY_FILE = path.join(__dirname, 'chat-history.json');
 let chatHistory = [];
 
-// Load chat history from file
+// Load chat history
 if (fs.existsSync(CHAT_HISTORY_FILE)) {
   try {
-    const data = fs.readFileSync(CHAT_HISTORY_FILE, 'utf8');
-    chatHistory = JSON.parse(data);
+    chatHistory = JSON.parse(fs.readFileSync(CHAT_HISTORY_FILE, 'utf8'));
   } catch (err) {
     console.error('Error reading chat history:', err);
   }
 }
 
-// Middleware to log each HTTP request
+// Middleware to log HTTP requests
 app.use((req, res, next) => {
   console.log(`📥 HTTP Request:
   ├─ IP: ${req.ip}
   ├─ Method: ${req.method}
   ├─ URL: ${req.originalUrl}
-  ├─ Headers: ${JSON.stringify(req.headers, null, 2)}
-  └─ Query Params: ${JSON.stringify(req.query)}
+  └─ Query: ${JSON.stringify(req.query)}
   `);
   next();
 });
 
-// Serve static files
 app.use(express.static('public'));
 
 const users = [];
-const IDLE_TIMEOUT = 5 * 60 * 1000; // 5 minutes of inactivity
+const IDLE_TIMEOUT = 90 * 1000; // 1.5 minutes
 
 function getCurrentTime() {
   return new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York' });
@@ -62,73 +59,74 @@ function saveChatHistory() {
   });
 }
 
-// Function to check for idle users
-function checkIdleUsers() {
-  const currentTime = Date.now();
+// Periodic idle check
+setInterval(() => {
+  const now = Date.now();
   users.forEach(user => {
-    if (currentTime - user.lastActivity > IDLE_TIMEOUT) {
+    if (now - user.lastActivity > IDLE_TIMEOUT) {
       if (!user.isIdle) {
         user.isIdle = true;
-        console.log(`🕒 User ${user.username} is idle`);
-        io.to(user.socketId).emit('status', { status: 'idle' });
+        user.displayName = `${user.originalName} (idle)`;
+        console.log(`🕒 ${user.originalName} is now idle`);
+        io.emit('update users', users.map(u => ({
+          username: u.displayName,
+          color: u.color,
+          avatar: u.avatar
+        })));
       }
     } else {
       if (user.isIdle) {
         user.isIdle = false;
-        console.log(`✅ User ${user.username} is active again`);
-        io.to(user.socketId).emit('status', { status: 'active' });
+        user.displayName = user.originalName;
+        console.log(`✅ ${user.originalName} is active again`);
+        io.emit('update users', users.map(u => ({
+          username: u.displayName,
+          color: u.color,
+          avatar: u.avatar
+        })));
       }
     }
   });
-}
-
-// Call checkIdleUsers periodically
-setInterval(checkIdleUsers, 30 * 1000); // Check every 30 seconds
+}, 30 * 1000); // every 30 sec
 
 io.on('connection', (socket) => {
-  const handshake = socket.handshake;
+  console.log(`✅ New WebSocket connection from ${socket.id}`);
 
-  console.log(`✅ New WebSocket connection:
-  ├─ Socket ID: ${socket.id}
-  ├─ IP: ${handshake.address}
-  ├─ User-Agent: ${handshake.headers['user-agent']}
-  ├─ Time: ${new Date().toISOString()}
-  ├─ Headers: ${JSON.stringify(handshake.headers, null, 2)}
-  └─ Query: ${JSON.stringify(handshake.query)}
-  `);
-
-  // Send chat history
   socket.emit('chat history', chatHistory);
 
   socket.on('new user', (username, color, avatar) => {
-    const user = { username, socketId: socket.id, color, avatar, lastActivity: Date.now(), isIdle: false };
+    const user = {
+      socketId: socket.id,
+      originalName: username,
+      displayName: username,
+      color,
+      avatar,
+      lastActivity: Date.now(),
+      isIdle: false,
+    };
     users.push(user);
-    console.log(`👤 User joined:
-    ├─ Username: ${username}
-    ├─ Color: ${color}
-    └─ Avatar: ${avatar}
-    `);
-    io.emit('update users', users);
+    console.log(`👤 ${username} joined`);
+    io.emit('update users', users.map(u => ({
+      username: u.displayName,
+      color: u.color,
+      avatar: u.avatar
+    })));
     broadcastSystemMessage(`${username} has joined the chat.`);
   });
 
   socket.on('chat message', (message) => {
     const user = users.find(u => u.socketId === socket.id);
     if (user) {
-      user.lastActivity = Date.now(); // Update activity time
+      user.lastActivity = Date.now();
     }
     const msg = {
-      user: user?.username || 'Anonymous',
+      user: user?.displayName || 'Anonymous',
       text: message,
       color: user?.color || '#000000',
       avatar: user?.avatar || 'A',
       time: getCurrentTime(),
     };
-    console.log(`💬 Message received:
-    ├─ From: ${msg.user}
-    ├─ Message: ${msg.text}
-    └─ Time: ${msg.time}
-    `);
+    console.log(`💬 ${msg.user}: ${msg.text}`);
     io.emit('chat message', msg);
     chatHistory.push(msg);
     saveChatHistory();
@@ -136,19 +134,14 @@ io.on('connection', (socket) => {
 
   socket.on('private message', (data) => {
     const sender = users.find(u => u.socketId === socket.id);
-    const recipient = users.find(u => u.username === data.recipient);
-    if (recipient && sender) {
-      console.log(`📩 Private message:
-      ├─ From: ${sender.username}
-      ├─ To: ${recipient.username}
-      └─ Text: ${data.message}
-      `);
+    const recipient = users.find(u => u.originalName === data.recipient || u.displayName === data.recipient);
+    if (sender && recipient) {
+      console.log(`📩 Private from ${sender.originalName} to ${recipient.originalName}: ${data.message}`);
       io.to(recipient.socketId).emit('private message', {
-        user: sender.username,
+        user: sender.displayName,
         text: data.message,
       });
     } else {
-      console.log(`⚠️ Private message failed: recipient not found.`);
       socket.emit('error', `User ${data.recipient} not found`);
     }
   });
@@ -156,12 +149,8 @@ io.on('connection', (socket) => {
   socket.on('typing', (isTyping) => {
     const user = users.find(u => u.socketId === socket.id);
     if (user) {
-      console.log(`✍️ Typing status:
-      ├─ User: ${user.username}
-      └─ Is typing: ${isTyping}
-      `);
       socket.broadcast.emit('typing', {
-        user: user.username,
+        user: user.displayName,
         isTyping,
       });
     }
@@ -170,13 +159,15 @@ io.on('connection', (socket) => {
   socket.on('username changed', (newUsername) => {
     const user = users.find(u => u.socketId === socket.id);
     if (user) {
-      const oldUsername = user.username;
-      user.username = newUsername;
-      console.log(`🔁 Username changed:
-      ├─ From: ${oldUsername}
-      └─ To: ${newUsername}
-      `);
-      io.emit('update users', users);
+      const oldUsername = user.originalName;
+      user.originalName = newUsername;
+      user.displayName = newUsername + (user.isIdle ? ' (idle)' : '');
+      console.log(`🔁 Username changed: ${oldUsername} → ${newUsername}`);
+      io.emit('update users', users.map(u => ({
+        username: u.displayName,
+        color: u.color,
+        avatar: u.avatar
+      })));
       broadcastSystemMessage(`${oldUsername} changed username to ${newUsername}.`);
     }
   });
@@ -185,14 +176,13 @@ io.on('connection', (socket) => {
     const index = users.findIndex(u => u.socketId === socket.id);
     if (index !== -1) {
       const [user] = users.splice(index, 1);
-      console.log(`❌ Disconnected:
-      ├─ Username: ${user.username}
-      └─ Socket ID: ${socket.id}
-      `);
-      io.emit('update users', users);
-      broadcastSystemMessage(`${user.username} has left the chat.`);
-    } else {
-      console.log(`❌ Unknown user disconnected: Socket ID: ${socket.id}`);
+      console.log(`❌ Disconnected: ${user.originalName}`);
+      io.emit('update users', users.map(u => ({
+        username: u.displayName,
+        color: u.color,
+        avatar: u.avatar
+      })));
+      broadcastSystemMessage(`${user.originalName} has left the chat.`);
     }
   });
 });

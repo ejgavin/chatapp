@@ -5,7 +5,7 @@ const chatUI = document.getElementById('chat-ui');
 const usernameScreen = document.getElementById('username-screen');
 const usernameInput = document.getElementById('username-input');
 const enterChatBtn = document.getElementById('enter-chat-btn');
-const usernameError = document.getElementById('username-error'); // NEW: Error element
+const usernameError = document.getElementById('username-error');
 
 const input = document.getElementById('message-input');
 const sendButton = document.getElementById('send-btn');
@@ -34,11 +34,11 @@ typingIndicator.classList.add('text-sm', 'text-gray-500', 'mt-2', 'typing-indica
 messages.parentElement.insertBefore(typingIndicator, messages.nextSibling);
 
 let username = localStorage.getItem('username') || '';
-let userStatus = 'active';  // Track user activity status
+let userStatus = 'active';
 let idleTimeout = null;
-const idleLimit = 2 * 60 * 1000;  // 2 minutes
-let lastInteractionTime = Date.now();  // Track the last interaction time
-const statusLogInterval = 15 * 1000;  // 15 seconds
+let lastInteractionTime = Date.now();
+const idleLimit = 2 * 60 * 1000;
+const statusLogInterval = 15 * 1000;
 
 const allowedNames = [
   "Emiliano", "Fiona", "Eliot", "Krishay", "Channing", "Anna", "Mayla",
@@ -48,7 +48,6 @@ const allowedNames = [
   "Dexter", "Charlie", "Nick", "Sam", "Nate", "Aleksander", "Alek", "Eli"
 ];
 
-// Capitalization and color functions
 function capitalizeFirstLetter(name) {
   return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
 }
@@ -61,7 +60,6 @@ function getRandomColor() {
   return color;
 }
 
-// Enter Chat logic
 function enterChat() {
   const enteredUsername = usernameInput.value.trim();
   const capitalizedUsername = capitalizeFirstLetter(enteredUsername);
@@ -79,9 +77,9 @@ function enterChat() {
     socket.emit('new user', username, color, avatar);
     usernameScreen.classList.add('hidden');
     chatUI.classList.remove('hidden');
-    usernameError.textContent = ''; // Clear error
-    startIdleDetection();  // Start idle detection when user enters chat
-    startStatusLogging();  // Start status logging every 15 seconds
+    usernameError.textContent = '';
+    startIdleDetection();
+    startStatusLogging();
   }
 }
 
@@ -90,7 +88,6 @@ usernameInput.addEventListener('keypress', (e) => {
   if (e.key === 'Enter') enterChat();
 });
 
-// Send message logic
 function sendMessage() {
   if (input.value.trim()) {
     if (privateRecipient) {
@@ -120,16 +117,11 @@ input.addEventListener('input', () => {
   socket.emit('typing', input.value.length > 0);
 });
 
-// Chat history and message handling
 socket.on('chat history', (history) => {
-  history.forEach(msg => {
-    displayMessage(msg);
-  });
+  history.forEach(displayMessage);
 });
 
-socket.on('chat message', msg => {
-  displayMessage(msg);
-});
+socket.on('chat message', displayMessage);
 
 socket.on('private message', msg => {
   const item = document.createElement('div');
@@ -142,14 +134,12 @@ socket.on('private message', msg => {
   messages.scrollTop = messages.scrollHeight;
 });
 
-// Typing indicator update
 socket.on('typing', data => {
   typingIndicator.textContent = data.isTyping ? `${data.user} is typing...` : '';
   chatType.textContent = privateRecipient ? 'Private Chat' : 'Public Chat';
   currentChatWith.textContent = privateRecipient ? privateRecipient : 'No one';
 });
 
-// Users list update
 socket.on('update users', users => {
   onlineUsersList.innerHTML = '';
   users.forEach(user => {
@@ -173,7 +163,6 @@ socket.on('update users', users => {
   });
 });
 
-// Emoji picker logic
 emojiBtn.addEventListener('click', () => {
   emojiContainer.classList.remove('hidden');
 });
@@ -186,7 +175,6 @@ closeEmojiBtn.addEventListener('click', () => {
   emojiContainer.classList.add('hidden');
 });
 
-// Settings button and private chat logic
 settingsBtn.addEventListener('click', () => {
   settingsModal.classList.remove('hidden');
 });
@@ -207,19 +195,15 @@ startPrivateChatButton.addEventListener('click', () => {
   }
 });
 
-publicChatButton.addEventListener('click', () => {
-  privateRecipient = null;
-  logChatMessage('Switched to public chat.');
-  chatType.textContent = 'Public Chat';
-  currentChatWith.textContent = 'No one';
-});
+publicChatButton.addEventListener('click', switchToPublic);
+publicChatButtonTop.addEventListener('click', switchToPublic);
 
-publicChatButtonTop.addEventListener('click', () => {
+function switchToPublic() {
   privateRecipient = null;
   logChatMessage('Switched to public chat.');
   chatType.textContent = 'Public Chat';
   currentChatWith.textContent = 'No one';
-});
+}
 
 changeUsernameButton.addEventListener('click', () => {
   const newUsername = changeUsernameInput.value.trim();
@@ -242,7 +226,6 @@ changeUsernameButton.addEventListener('click', () => {
   }
 });
 
-// Display messages in chat UI
 function displayMessage(msg) {
   const item = document.createElement('div');
   item.classList.add('message-item');
@@ -260,7 +243,6 @@ function displayMessage(msg) {
   messages.scrollTop = messages.scrollHeight;
 }
 
-// Log chat message (general and private)
 function logChatMessage(text) {
   const item = document.createElement('div');
   item.innerHTML = `<div class="text-gray-500 text-sm italic">${text}</div>`;
@@ -285,24 +267,28 @@ function sanitize(input) {
   return div.innerHTML;
 }
 
-// Start idle detection
+// IDLE DETECTION
 function startIdleDetection() {
   document.addEventListener('mousemove', resetIdleTimer);
   document.addEventListener('keypress', resetIdleTimer);
+  resetIdleTimer(); // immediately start timer
 }
 
-// Reset idle timer
 function resetIdleTimer() {
+  if (userStatus !== 'active') {
+    userStatus = 'active';
+    socket.emit('update status', { status: 'active' });
+  }
+
   clearTimeout(idleTimeout);
   idleTimeout = setTimeout(() => {
     userStatus = 'idle';
     socket.emit('update status', { status: 'idle' });
   }, idleLimit);
 
-  lastInteractionTime = Date.now();  // Update last interaction time
+  lastInteractionTime = Date.now();
 }
 
-// Start status logging every 15 seconds
 function startStatusLogging() {
   setInterval(() => {
     const idleDuration = Math.round((Date.now() - lastInteractionTime) / 1000);
@@ -310,7 +296,6 @@ function startStatusLogging() {
   }, statusLogInterval);
 }
 
-// Socket.io updates for idle status
 socket.on('update status', ({ username, status }) => {
   const userElement = document.querySelector(`[data-username="${username}"]`);
   if (userElement) {
