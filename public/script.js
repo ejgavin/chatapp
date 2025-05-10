@@ -85,10 +85,10 @@ socket.on('user joined', (users) => {
   updateOnlineUsersList(users);
 });
 
-socket.on('chat message', (username, message, color, avatar) => {
+socket.on('chat message', (data) => {
   const msg = document.createElement('div');
   msg.classList.add('mb-2');
-  msg.innerHTML = `<strong style="color:${color}">${avatar}</strong>: <span>${message}</span>`;
+  msg.innerHTML = `<strong style="color:${data.color}">${data.avatar}</strong>: <span>${data.message}</span>`;
   messages.appendChild(msg);
   messages.scrollTop = messages.scrollHeight;
 });
@@ -109,7 +109,7 @@ sendButton.addEventListener('click', () => {
     if (privateRecipient) {
       socket.emit('private message', privateRecipient, message);
     } else {
-      socket.emit('chat message', message);
+      socket.emit('chat message', { username, message });
     }
     input.value = '';
   }
