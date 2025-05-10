@@ -34,9 +34,9 @@ typingIndicator.classList.add('text-sm', 'text-gray-500', 'mt-2', 'typing-indica
 messages.parentElement.insertBefore(typingIndicator, messages.nextSibling);
 
 let username = localStorage.getItem('username') || '';
-let idleTimeout;
-let idleLimit = 2 * 60 * 1000; // 2 minutes
-let userStatus = 'online'; // Store user status
+let userStatus = 'active';  // Track user activity status
+let idleTimeout = null;
+const idleLimit = 2 * 60 * 1000;  // 2 minutes
 
 const allowedNames = [
   "Emiliano", "Fiona", "Eliot", "Krishay", "Channing", "Anna", "Mayla",
@@ -46,6 +46,7 @@ const allowedNames = [
   "Dexter", "Charlie", "Nick", "Sam", "Nate", "Aleksander", "Alek", "Eli"
 ];
 
+// Capitalization and color functions
 function capitalizeFirstLetter(name) {
   return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
 }
@@ -58,6 +59,7 @@ function getRandomColor() {
   return color;
 }
 
+// Enter Chat logic
 function enterChat() {
   const enteredUsername = usernameInput.value.trim();
   const capitalizedUsername = capitalizeFirstLetter(enteredUsername);
@@ -76,7 +78,7 @@ function enterChat() {
     usernameScreen.classList.add('hidden');
     chatUI.classList.remove('hidden');
     usernameError.textContent = ''; // Clear error
-    startIdleDetection(); // Start idle detection
+    startIdleDetection();  // Start idle detection when user enters chat
   }
 }
 
@@ -85,6 +87,7 @@ usernameInput.addEventListener('keypress', (e) => {
   if (e.key === 'Enter') enterChat();
 });
 
+// Send message logic
 function sendMessage() {
   if (input.value.trim()) {
     if (privateRecipient) {
@@ -114,6 +117,7 @@ input.addEventListener('input', () => {
   socket.emit('typing', input.value.length > 0);
 });
 
+// Chat history and message handling
 socket.on('chat history', (history) => {
   history.forEach(msg => {
     displayMessage(msg);
@@ -135,12 +139,14 @@ socket.on('private message', msg => {
   messages.scrollTop = messages.scrollHeight;
 });
 
+// Typing indicator update
 socket.on('typing', data => {
   typingIndicator.textContent = data.isTyping ? `${data.user} is typing...` : '';
   chatType.textContent = privateRecipient ? 'Private Chat' : 'Public Chat';
   currentChatWith.textContent = privateRecipient ? privateRecipient : 'No one';
 });
 
+// Users list update
 socket.on('update users', users => {
   onlineUsersList.innerHTML = '';
   users.forEach(user => {
@@ -150,7 +156,7 @@ socket.on('update users', users => {
     userItem.classList.add('relative', 'group');
     userItem.innerHTML = `
       <button class="text-blue-600 underline hover:text-blue-800" data-username="${user.username}">
-        ${user.username} ${user.status === 'idle' ? '<span class="text-red-500">(Idle)</span>' : ''}
+        ${user.username} ${user.status === 'idle' ? '(Idle)' : ''}
       </button>
     `;
     const nameBtn = userItem.querySelector('button');
@@ -164,6 +170,7 @@ socket.on('update users', users => {
   });
 });
 
+// Emoji picker logic
 emojiBtn.addEventListener('click', () => {
   emojiContainer.classList.remove('hidden');
 });
@@ -176,6 +183,7 @@ closeEmojiBtn.addEventListener('click', () => {
   emojiContainer.classList.add('hidden');
 });
 
+// Settings button and private chat logic
 settingsBtn.addEventListener('click', () => {
   settingsModal.classList.remove('hidden');
 });
@@ -231,23 +239,51 @@ changeUsernameButton.addEventListener('click', () => {
   }
 });
 
+// Display messages in chat UI
 function displayMessage(msg) {
   const item = document.createElement('div');
-  item.classList.add('message');
-  item.innerHTML = `<strong>${msg.user}: </strong>${sanitize(msg.text)}`;
+  item.classList.add('message-item');
+  item.innerHTML = `
+    <div class="flex items-center space-x-2 mb-1">
+      <div class="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-white text-sm font-bold" style="background-color: ${msg.color}">
+        ${msg.avatar}
+      </div>
+      <span class="text-sm font-medium" style="color: ${msg.color}">${msg.user}</span>
+      <span class="text-xs text-gray-500">${msg.time}</span>
+    </div>
+    <div class="ml-8">${sanitize(msg.text)}</div>
+  `;
   messages.appendChild(item);
   messages.scrollTop = messages.scrollHeight;
 }
 
-function logChatMessage(msg) {
-  displayMessage({ user: 'System', text: msg });
+// Log chat message (general and private)
+function logChatMessage(text) {
+  const item = document.createElement('div');
+  item.innerHTML = `<div class="text-gray-500 text-sm italic">${text}</div>`;
+  messages.appendChild(item);
+  messages.scrollTop = messages.scrollHeight;
 }
 
-function sanitize(text) {
-  return text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+function logPrivateMessage(text) {
+  const item = document.createElement('div');
+  item.innerHTML = `
+    <div class="bg-blue-100 p-2 rounded-md">
+      <strong>Private to ${privateRecipient}:</strong> ${sanitize(text)}
+    </div>
+  `;
+  messages.appendChild(item);
+  messages.scrollTop = messages.scrollHeight;
 }
 
-// Handle idle detection
+// Sanitize user input for security
+function sanitize(str) {
+  const temp = document.createElement('div');
+  temp.textContent = str;
+  return temp.innerHTML;
+}
+
+// Idle detection functions
 function startIdleDetection() {
   resetIdleTimer(); // Reset timer initially
   document.addEventListener('mousemove', resetIdleTimer);
@@ -256,19 +292,17 @@ function startIdleDetection() {
 
 function resetIdleTimer() {
   clearTimeout(idleTimeout);
-  idleTimeout = setTimeout(setIdleStatus, idleLimit);
-}
-
-function setIdleStatus() {
-  if (userStatus !== 'idle') {
+  idleTimeout = setTimeout(() => {
     userStatus = 'idle';
-    socket.emit('status update', { status: userStatus });
-    logChatMessage('You are now idle.');
-  }
+    socket.emit('update status', { status: 'idle' });
+  }, idleLimit);
 }
 
-socket.on('status update', (status) => {
-  if (status.username === username) {
-    userStatus = status.status;
+// Socket.io updates for idle status
+socket.on('update status', ({ username, status }) => {
+  const userElement = document.querySelector(`[data-username="${username}"]`);
+  if (userElement) {
+    const statusText = status === 'idle' ? '(Idle)' : '';
+    userElement.innerHTML = `${username} ${statusText}`;
   }
 });
