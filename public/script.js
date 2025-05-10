@@ -29,7 +29,7 @@ const changeUsernameButton = document.getElementById('change-username-btn');
 const onlineUsersList = document.getElementById('online-users');
 
 const typingIndicator = document.createElement('div');
-typingIndicator.classList.add('text-sm', 'text-gray-500', 'mt-2', 'typing-indicator');
+typingIndicator.classList.add('text-sm', 'text-gray-500', 'h-5', 'mb-2', 'px-2');
 messages.parentElement.insertBefore(typingIndicator, messages.nextSibling);
 
 let username = localStorage.getItem('username') || '';
@@ -81,93 +81,48 @@ usernameInput.addEventListener('keypress', (e) => {
 
 function sendMessage() {
   if (input.value.trim()) {
-    if (privateRecipient) {
-      socket.emit('private message', { recipient: privateRecipient, message: input.value });
-      logPrivateMessage(input.value);
-    } else {
-      socket.emit('chat message', input.value);
-    }
-    socket.emit('typing', false);
+    const message = {
+      username,
+      text: input.value,
+      privateRecipient,
+    };
+    socket.emit('send message', message);
     input.value = '';
   }
 }
 
-sendButton.addEventListener('click', (e) => {
-  e.preventDefault();
-  sendMessage();
-});
-
+sendButton.addEventListener('click', sendMessage);
 input.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    sendMessage();
-  }
-});
-
-input.addEventListener('input', () => {
-  socket.emit('typing', input.value.length > 0);
-});
-
-socket.on('chat history', (history) => {
-  history.forEach(msg => {
-    displayMessage(msg);
-  });
-});
-
-socket.on('chat message', msg => {
-  displayMessage(msg);
-});
-
-socket.on('private message', msg => {
-  const item = document.createElement('div');
-  item.innerHTML = `
-    <div class="bg-green-100 p-2 rounded-md">
-      <strong>Private from ${msg.user}: </strong>${sanitize(msg.text)}
-    </div>
-  `;
-  messages.appendChild(item);
-  messages.scrollTop = messages.scrollHeight;
-});
-
-socket.on('typing', data => {
-  typingIndicator.textContent = data.isTyping ? `${data.user} is typing...` : '';
-  chatType.textContent = privateRecipient ? 'Private Chat' : 'Public Chat';
-  currentChatWith.textContent = privateRecipient ? privateRecipient : 'No one';
-});
-
-socket.on('update users', users => {
-  onlineUsersList.innerHTML = '';
-  users.forEach(user => {
-    if (user.username === username) return;
-
-    const userItem = document.createElement('li');
-    userItem.classList.add('relative', 'group');
-    userItem.innerHTML = `
-      <button class="text-blue-600 underline hover:text-blue-800" data-username="${user.username}">
-        ${user.username}
-      </button>
-    `;
-    const nameBtn = userItem.querySelector('button');
-    nameBtn.addEventListener('click', () => {
-      privateRecipient = user.username;
-      logChatMessage(`Started private chat with ${user.username}`);
-      chatType.textContent = 'Private Chat';
-      currentChatWith.textContent = privateRecipient;
-    });
-    onlineUsersList.appendChild(userItem);
-  });
+  if (e.key === 'Enter') sendMessage();
 });
 
 emojiBtn.addEventListener('click', () => {
-  emojiContainer.classList.remove('hidden');
-});
-
-emojiPicker.addEventListener('emoji-click', (event) => {
-  input.value += event.detail.unicode;
+  emojiContainer.classList.toggle('hidden');
 });
 
 closeEmojiBtn.addEventListener('click', () => {
   emojiContainer.classList.add('hidden');
+});
+
+socket.on('receive message', (message) => {
+  const { username, text, privateRecipient } = message;
+  const messageElement = document.createElement('div');
+  messageElement.classList.add('p-2', 'border-b');
+  if (privateRecipient) {
+    messageElement.classList.add('bg-gray-100');
+  }
+  messageElement.innerHTML = `<strong>${username}:</strong> ${text}`;
+  messages.appendChild(messageElement);
+  messages.scrollTop = messages.scrollHeight;
+});
+
+socket.on('online users', (users) => {
+  onlineUsersList.innerHTML = '';
+  users.forEach((user) => {
+    const listItem = document.createElement('li');
+    listItem.textContent = user;
+    onlineUsersList.appendChild(listItem);
+  });
 });
 
 settingsBtn.addEventListener('click', () => {
@@ -179,89 +134,28 @@ closeSettingsButton.addEventListener('click', () => {
 });
 
 startPrivateChatButton.addEventListener('click', () => {
-  privateRecipient = privateChatInput.value.trim();
-  if (privateRecipient) {
-    logChatMessage(`Started private chat with ${privateRecipient}`);
-    settingsModal.classList.add('hidden');
-    chatType.textContent = 'Private Chat';
+  const recipient = privateChatInput.value.trim();
+  if (recipient) {
+    privateRecipient = recipient;
+    chatType.textContent = `Private Chat with ${privateRecipient}`;
     currentChatWith.textContent = privateRecipient;
-  } else {
-    logChatMessage('Please enter a valid username for private chat.');
+    settingsModal.classList.add('hidden');
+    socket.emit('start private chat', recipient);
   }
 });
 
 publicChatButton.addEventListener('click', () => {
   privateRecipient = null;
-  logChatMessage('Switched to public chat.');
   chatType.textContent = 'Public Chat';
   currentChatWith.textContent = 'No one';
-});
-
-publicChatButtonTop.addEventListener('click', () => {
-  privateRecipient = null;
-  logChatMessage('Switched to public chat.');
-  chatType.textContent = 'Public Chat';
-  currentChatWith.textContent = 'No one';
+  settingsModal.classList.add('hidden');
 });
 
 changeUsernameButton.addEventListener('click', () => {
   const newUsername = changeUsernameInput.value.trim();
-  const capitalizedUsername = capitalizeFirstLetter(newUsername);
-
-  if (!allowedNames.includes(capitalizedUsername)) {
-    alert('This username is not allowed. Please choose another one.');
-    return;
-  }
-
   if (newUsername) {
-    socket.emit('username changed', capitalizedUsername);
-    username = capitalizedUsername;
+    username = newUsername;
     localStorage.setItem('username', username);
-    logChatMessage(`Username changed to ${capitalizedUsername}`);
-    changeUsernameInput.value = '';
-    settingsModal.classList.add('hidden');
-  } else {
-    logChatMessage('Please enter a valid new username.');
+    socket.emit('change username', username);
   }
 });
-
-function displayMessage(msg) {
-  const item = document.createElement('div');
-  item.classList.add('message-item');
-  item.innerHTML = `
-    <div class="flex items-center space-x-2 mb-1">
-      <div class="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-white text-sm font-bold" style="background-color: ${msg.color}">
-        ${msg.avatar}
-      </div>
-      <span class="text-sm font-medium" style="color: ${msg.color}">${msg.user}</span>
-      <span class="text-xs text-gray-500">${msg.time}</span>
-    </div>
-    <div class="ml-8">${sanitize(msg.text)}</div>
-  `;
-  messages.appendChild(item);
-  messages.scrollTop = messages.scrollHeight;
-}
-
-function logChatMessage(text) {
-  const item = document.createElement('div');
-  item.innerHTML = `<div class="text-gray-500 text-sm italic">${text}</div>`;
-  messages.appendChild(item);
-  messages.scrollTop = messages.scrollHeight;
-}
-
-function logPrivateMessage(text) {
-  const item = document.createElement('div');
-  item.innerHTML = `
-    <div class="bg-blue-100 p-2 rounded-md">
-      <strong>Private to ${privateRecipient}:</strong> ${sanitize(text)}
-    </div>
-  `;
-  messages.appendChild(item);
-  messages.scrollTop = messages.scrollHeight;
-}
-
-function sanitize(str) {
-  const temp = document.createElement('div');
-  temp.textContent = str;
-  return temp.innerHTML;
-}
