@@ -16,19 +16,9 @@ if (fs.existsSync(CHAT_HISTORY_FILE)) {
   try {
     chatHistory = JSON.parse(fs.readFileSync(CHAT_HISTORY_FILE, 'utf8'));
   } catch (err) {
-    console.error('Error reading chat history:', err);
+    log(`❌ Error reading chat history: ${err}`);
   }
 }
-
-app.use((req, res, next) => {
-  console.log(`📥 HTTP Request:
-  ├─ IP: ${req.ip}
-  ├─ Method: ${req.method}
-  ├─ URL: ${req.originalUrl}
-  └─ Query: ${JSON.stringify(req.query)}
-  `);
-  next();
-});
 
 app.use(express.static('public'));
 
@@ -36,7 +26,21 @@ const users = [];
 const IDLE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
 function getCurrentTime() {
-  return new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York' });
+  return new Date().toLocaleTimeString('en-US', {
+    timeZone: 'America/New_York',
+    hour12: true
+  });
+}
+
+function getCurrentDateTime() {
+  return new Date().toLocaleString('en-US', {
+    timeZone: 'America/New_York',
+    hour12: true
+  });
+}
+
+function log(message) {
+  console.log(`[${getCurrentDateTime()}] ${message}`);
 }
 
 function broadcastSystemMessage(text) {
@@ -54,7 +58,7 @@ function broadcastSystemMessage(text) {
 
 function saveChatHistory() {
   fs.writeFile(CHAT_HISTORY_FILE, JSON.stringify(chatHistory, null, 2), (err) => {
-    if (err) console.error('Error saving chat history:', err);
+    if (err) log(`❌ Error saving chat history: ${err}`);
   });
 }
 
@@ -70,12 +74,12 @@ setInterval(() => {
     if (isNowIdle && !wasIdle) {
       user.isIdle = true;
       user.displayName = `${user.originalName} (idle)`;
-      console.log(`🕒 ${user.originalName} is now idle`);
+      log(`🕒 ${user.originalName} is now idle`);
       userListChanged = true;
     } else if (!isNowIdle && wasIdle) {
       user.isIdle = false;
       user.displayName = user.originalName;
-      console.log(`✅ ${user.originalName} is active again`);
+      log(`✅ ${user.originalName} is active again`);
       userListChanged = true;
     }
   });
@@ -90,7 +94,7 @@ setInterval(() => {
 }, 5 * 1000); // every 5 seconds
 
 io.on('connection', (socket) => {
-  console.log(`✅ New WebSocket connection from ${socket.id}`);
+  log(`✅ New WebSocket connection from ${socket.id}`);
   socket.emit('chat history', chatHistory);
 
   socket.on('new user', (username, color, avatar) => {
@@ -104,7 +108,7 @@ io.on('connection', (socket) => {
       isIdle: false,
     };
     users.push(user);
-    console.log(`👤 ${username} joined`);
+    log(`👤 ${username} joined`);
     io.emit('update users', users.map(u => ({
       username: u.displayName,
       color: u.color,
@@ -125,7 +129,7 @@ io.on('connection', (socket) => {
       avatar: user?.avatar || 'A',
       time: getCurrentTime(),
     };
-    console.log(`💬 ${msg.user}: ${msg.text}`);
+    log(`💬 ${msg.user}: ${msg.text}`);
     io.emit('chat message', msg);
     chatHistory.push(msg);
     saveChatHistory();
@@ -135,7 +139,7 @@ io.on('connection', (socket) => {
     const sender = users.find(u => u.socketId === socket.id);
     const recipient = users.find(u => u.originalName === data.recipient || u.displayName === data.recipient);
     if (sender && recipient) {
-      console.log(`📩 Private from ${sender.originalName} to ${recipient.originalName}: ${data.message}`);
+      log(`📩 Private from ${sender.originalName} to ${recipient.originalName}: ${data.message}`);
       io.to(recipient.socketId).emit('private message', {
         user: sender.displayName,
         text: data.message,
@@ -161,7 +165,7 @@ io.on('connection', (socket) => {
       const oldUsername = user.originalName;
       user.originalName = newUsername;
       user.displayName = newUsername + (user.isIdle ? ' (idle)' : '');
-      console.log(`🔁 Username changed: ${oldUsername} → ${newUsername}`);
+      log(`🔁 Username changed: ${oldUsername} → ${newUsername}`);
       io.emit('update users', users.map(u => ({
         username: u.displayName,
         color: u.color,
@@ -175,7 +179,7 @@ io.on('connection', (socket) => {
     const index = users.findIndex(u => u.socketId === socket.id);
     if (index !== -1) {
       const [user] = users.splice(index, 1);
-      console.log(`❌ Disconnected: ${user.originalName}`);
+      log(`❌ Disconnected: ${user.originalName}`);
       io.emit('update users', users.map(u => ({
         username: u.displayName,
         color: u.color,
@@ -188,5 +192,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
+  log(`🚀 Server running at http://localhost:${PORT}`);
 });
