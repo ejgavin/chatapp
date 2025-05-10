@@ -10,7 +10,6 @@ const io = new Server(server);
 
 const CHAT_HISTORY_FILE = path.join(__dirname, 'chat-history.json');
 let chatHistory = [];
-let isTemporarilyDisabled = false;  // Flag for temporary disable
 
 // Load chat history
 if (fs.existsSync(CHAT_HISTORY_FILE)) {
@@ -94,20 +93,9 @@ setInterval(() => {
   }
 }, 5 * 1000); // every 5 seconds
 
-// API endpoints for admin to toggle temporary disable
-app.post('/api/toggle-disable', (req, res) => {
-  isTemporarilyDisabled = !isTemporarilyDisabled;  // Toggle the flag
-  io.emit('disable status', isTemporarilyDisabled);  // Notify all clients
-  res.json({ disabled: isTemporarilyDisabled });
-});
-
-// WebSocket connection logic
 io.on('connection', (socket) => {
   log(`✅ New WebSocket connection from ${socket.id}`);
-  
-  // Send current chat history and disable status to the client
   socket.emit('chat history', chatHistory);
-  socket.emit('disable status', isTemporarilyDisabled);
 
   socket.on('new user', (username, color, avatar) => {
     const user = {
@@ -126,25 +114,10 @@ io.on('connection', (socket) => {
       color: u.color,
       avatar: u.avatar
     })));
-
-    // Broadcast system message only if chat is not disabled
-    if (!isTemporarilyDisabled) {
-      broadcastSystemMessage(`${username} has joined the chat.`);
-    }
+    broadcastSystemMessage(`${username} has joined the chat.`);
   });
 
   socket.on('chat message', (message) => {
-    if (isTemporarilyDisabled) {
-      socket.emit('chat message', {
-        user: 'Server',
-        text: 'The chat is temporarily disabled by the admin.',
-        color: '#FF0000',
-        avatar: 'S',
-        time: getCurrentTime(),
-      });
-      return;
-    }
-
     const user = users.find(u => u.socketId === socket.id);
     if (user) {
       user.lastActivity = Date.now();
@@ -163,11 +136,6 @@ io.on('connection', (socket) => {
   });
 
   socket.on('private message', (data) => {
-    if (isTemporarilyDisabled) {
-      socket.emit('error', 'The chat is temporarily disabled by the admin.');
-      return;
-    }
-
     const sender = users.find(u => u.socketId === socket.id);
     const recipient = users.find(u => u.originalName === data.recipient || u.displayName === data.recipient);
     if (sender && recipient) {
@@ -205,6 +173,32 @@ io.on('connection', (socket) => {
       })));
       broadcastSystemMessage(`${oldUsername} changed username to ${newUsername}.`);
     }
+  });
+
+  socket.on('admin shutdown', () => {
+    log('🚨 Admin has initiated shutdown.');
+    io.emit('shutdown initiated');
+
+    let secondsRemaining = 15;
+
+    const countdownInterval = setInterval(() => {
+      if (secondsRemaining > 0) {
+        broadcastSystemMessage(`⚠️ Server is restarting in ${secondsRemaining} second${secondsRemaining === 1 ? '' : 's'}...`);
+        secondsRemaining--;
+      } else {
+        clearInterval(countdownInterval);
+        broadcastSystemMessage('🔁 Server is now restarting...');
+
+        // Allow the message to broadcast before shutdown
+        setTimeout(() => {
+          saveChatHistory(); // Final save
+          server.close(() => {
+            log('🛑 Server has shut down.');
+            process.exit(0); // End the process
+          });
+        }, 1000);
+      }
+    }, 1000);
   });
 
   socket.on('disconnect', () => {
