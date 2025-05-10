@@ -20,7 +20,6 @@ if (fs.existsSync(CHAT_HISTORY_FILE)) {
   }
 }
 
-// Middleware to log HTTP requests
 app.use((req, res, next) => {
   console.log(`📥 HTTP Request:
   ├─ IP: ${req.ip}
@@ -59,39 +58,39 @@ function saveChatHistory() {
   });
 }
 
-// Periodic idle check
+// Idle status check every 5 seconds
 setInterval(() => {
   const now = Date.now();
+  let userListChanged = false;
+
   users.forEach(user => {
-    if (now - user.lastActivity > IDLE_TIMEOUT) {
-      if (!user.isIdle) {
-        user.isIdle = true;
-        user.displayName = `${user.originalName} (idle)`;
-        console.log(`🕒 ${user.originalName} is now idle`);
-        io.emit('update users', users.map(u => ({
-          username: u.displayName,
-          color: u.color,
-          avatar: u.avatar
-        })));
-      }
-    } else {
-      if (user.isIdle) {
-        user.isIdle = false;
-        user.displayName = user.originalName;
-        console.log(`✅ ${user.originalName} is active again`);
-        io.emit('update users', users.map(u => ({
-          username: u.displayName,
-          color: u.color,
-          avatar: u.avatar
-        })));
-      }
+    const wasIdle = user.isIdle;
+    const isNowIdle = (now - user.lastActivity > IDLE_TIMEOUT);
+
+    if (isNowIdle && !wasIdle) {
+      user.isIdle = true;
+      user.displayName = `${user.originalName} (idle)`;
+      console.log(`🕒 ${user.originalName} is now idle`);
+      userListChanged = true;
+    } else if (!isNowIdle && wasIdle) {
+      user.isIdle = false;
+      user.displayName = user.originalName;
+      console.log(`✅ ${user.originalName} is active again`);
+      userListChanged = true;
     }
   });
-}, 30 * 1000); // every 30 sec
+
+  if (userListChanged) {
+    io.emit('update users', users.map(u => ({
+      username: u.displayName,
+      color: u.color,
+      avatar: u.avatar
+    })));
+  }
+}, 5 * 1000); // every 5 seconds
 
 io.on('connection', (socket) => {
   console.log(`✅ New WebSocket connection from ${socket.id}`);
-
   socket.emit('chat history', chatHistory);
 
   socket.on('new user', (username, color, avatar) => {
