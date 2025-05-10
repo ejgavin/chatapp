@@ -11,7 +11,7 @@ const io = new Server(server);
 const CHAT_HISTORY_FILE = path.join(__dirname, 'chat-history.json');
 let chatHistory = [];
 
-// Load chat history
+// Load chat history at server startup
 if (fs.existsSync(CHAT_HISTORY_FILE)) {
   try {
     chatHistory = JSON.parse(fs.readFileSync(CHAT_HISTORY_FILE, 'utf8'));
@@ -24,6 +24,7 @@ app.use(express.static('public'));
 
 const users = [];
 const IDLE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+const ADMIN_PASSWORD = 'your-admin-password'; // Set your admin password here
 
 function getCurrentTime() {
   return new Date().toLocaleTimeString('en-US', {
@@ -175,13 +176,17 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('admin shutdown', () => {
-    log('🚨 Admin has initiated shutdown.');
-    io.emit('shutdown initiated');
-    // Optional: Close the server after shutdown
-    server.close(() => {
-      log('🛑 Server has shut down.');
-    });
+  socket.on('admin shutdown', (password) => {
+    if (password === ADMIN_PASSWORD) {
+      log('🚨 Admin has initiated shutdown.');
+      io.emit('shutdown initiated');
+      // Optional: Close the server after shutdown
+      server.close(() => {
+        log('🛑 Server has shut down.');
+      });
+    } else {
+      socket.emit('error', 'Incorrect admin password.');
+    }
   });
 
   socket.on('disconnect', () => {
