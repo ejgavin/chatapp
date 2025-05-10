@@ -41,16 +41,16 @@
         <span id="chat-type">Public Chat</span> | <span id="current-chat-with">No one</span>
       </div>
 
-      <!-- Message Display Area -->
-      <div id="messages" class="space-y-2 h-96 overflow-y-auto p-2 border rounded bg-white mb-2">
+      <!-- Message Display Area (Larger and Less Space Above) -->
+      <div id="messages" class="space-y-2 h-128 overflow-y-auto p-2 border rounded bg-white mb-1">
         <!-- Messages will appear here -->
       </div>
 
-      <!-- Typing Indicator (moved below messages and above input) -->
-      <div id="typing-indicator" class="text-sm text-gray-500 h-5 mb-2 px-2"></div>
+      <!-- Typing Indicator (smaller gap from messages) -->
+      <div id="typing-indicator" class="text-sm text-gray-500 h-5 mb-1 px-2"></div>
 
       <!-- Input + Emoji Area -->
-      <div class="mt-4 flex space-x-2 relative">
+      <div class="mt-2 flex space-x-2 relative">
         <input id="message-input" type="text" class="p-2 flex-1 border rounded" placeholder="Type a message..." />
         <button id="emoji-btn" class="bg-gray-300 p-2 rounded">🙂</button>
         <button id="send-btn" class="bg-blue-500 text-white px-4 py-2 rounded">Send</button>
