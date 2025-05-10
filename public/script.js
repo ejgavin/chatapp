@@ -5,6 +5,7 @@ const chatUI = document.getElementById('chat-ui');
 const usernameScreen = document.getElementById('username-screen');
 const usernameInput = document.getElementById('username-input');
 const enterChatBtn = document.getElementById('enter-chat-btn');
+const usernameError = document.getElementById('username-error'); // NEW: Error element
 
 const input = document.getElementById('message-input');
 const sendButton = document.getElementById('send-btn');
@@ -59,7 +60,7 @@ function enterChat() {
   const capitalizedUsername = capitalizeFirstLetter(enteredUsername);
 
   if (!allowedNames.includes(capitalizedUsername)) {
-    alert('This username is not allowed. Please choose another one.');
+    usernameError.textContent = "Please use your own name.";
     return;
   }
 
@@ -71,6 +72,7 @@ function enterChat() {
     socket.emit('new user', username, color, avatar);
     usernameScreen.classList.add('hidden');
     chatUI.classList.remove('hidden');
+    usernameError.textContent = ''; // Clear error
   }
 }
 
@@ -209,7 +211,7 @@ changeUsernameButton.addEventListener('click', () => {
   const capitalizedUsername = capitalizeFirstLetter(newUsername);
 
   if (!allowedNames.includes(capitalizedUsername)) {
-    alert('This username is not allowed. Please choose another one.');
+    logChatMessage('This username is not allowed. Please use your own name.');
     return;
   }
 
