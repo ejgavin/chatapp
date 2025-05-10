@@ -82,6 +82,16 @@
             <button id="clear-chat-btn" class="bg-red-600 text-white px-4 py-2 rounded mt-2 w-full">Clear Chat</button>
           </div>
 
+          <!-- 🔒 Admin Shutdown Section -->
+          <div>
+            <label for="shutdown-password" class="block text-sm">Admin Shutdown</label>
+            <div class="flex space-x-2 mt-1">
+              <input id="shutdown-password" type="password" class="p-2 border rounded w-full" placeholder="Enter admin password" />
+              <button id="shutdown-btn" class="bg-red-700 text-white px-4 py-2 rounded">Shutdown</button>
+            </div>
+            <p id="shutdown-error" class="text-red-500 text-sm mt-1 hidden">Incorrect password.</p>
+          </div>
+
           <button id="public-chat-btn" class="bg-gray-500 text-white px-4 py-2 rounded mt-2 w-full">Go to Public Chat</button>
           <button id="close-settings-btn" class="bg-red-500 text-white px-4 py-2 rounded mt-4 w-full">Close Settings</button>
         </div>

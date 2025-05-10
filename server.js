@@ -175,6 +175,15 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('admin shutdown', () => {
+    log('🚨 Admin has initiated shutdown.');
+    io.emit('shutdown initiated');
+    // Optional: Close the server after shutdown
+    server.close(() => {
+      log('🛑 Server has shut down.');
+    });
+  });
+
   socket.on('disconnect', () => {
     const index = users.findIndex(u => u.socketId === socket.id);
     if (index !== -1) {

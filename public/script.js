@@ -1,6 +1,7 @@
 const socket = io();
 let privateRecipient = null;
 
+// UI ELEMENTS
 const chatUI = document.getElementById('chat-ui');
 const usernameScreen = document.getElementById('username-screen');
 const usernameInput = document.getElementById('username-input');
@@ -40,13 +41,7 @@ let lastInteractionTime = Date.now();
 const idleLimit = 2 * 60 * 1000;
 const statusLogInterval = 15 * 1000;
 
-const allowedNames = [
-  "Emiliano", "Fiona", "Eliot", "Krishay", "Channing", "Anna", "Mayla",
-  "Adela", "Nathaniel", "Noah", "Stefan", "Michael", "Adam", "Nicholas",
-  "Samuel", "Jonah", "Amber", "Annie", "Conor", "Christopher", "Seneca",
-  "Magnus", "Jace", "Martin", "Daehan", "Charles", "Ava",
-  "Dexter", "Charlie", "Nick", "Sam", "Nate", "Aleksander", "Alek", "Eli"
-];
+const allowedNames = [ /* name list unchanged */ "Emiliano", "Fiona", "Eliot", "Krishay", "Channing", "Anna", "Mayla", "Adela", "Nathaniel", "Noah", "Stefan", "Michael", "Adam", "Nicholas", "Samuel", "Jonah", "Amber", "Annie", "Conor", "Christopher", "Seneca", "Magnus", "Jace", "Martin", "Daehan", "Charles", "Ava", "Dexter", "Charlie", "Nick", "Sam", "Nate", "Aleksander", "Alek", "Eli" ];
 
 function capitalizeFirstLetter(name) {
   return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
@@ -271,7 +266,7 @@ function sanitize(input) {
 function startIdleDetection() {
   document.addEventListener('mousemove', resetIdleTimer);
   document.addEventListener('keypress', resetIdleTimer);
-  resetIdleTimer(); // immediately start timer
+  resetIdleTimer();
 }
 
 function resetIdleTimer() {
@@ -302,4 +297,27 @@ socket.on('update status', ({ username, status }) => {
     const statusText = status === 'idle' ? '(Idle)' : '';
     userElement.innerHTML = `${username} ${statusText}`;
   }
+});
+
+// 🔒 SHUTDOWN FUNCTIONALITY
+document.getElementById('shutdown-btn').addEventListener('click', () => {
+  const password = document.getElementById('shutdown-password').value;
+  const errorMsg = document.getElementById('shutdown-error');
+  if (password === 'eliadmin123') {
+    socket.emit('admin shutdown');
+    errorMsg.classList.add('hidden');
+  } else {
+    errorMsg.classList.remove('hidden');
+  }
+});
+
+socket.on('shutdown initiated', () => {
+  messages.innerHTML = ''; // Clear existing messages
+  const shutdownMsg = document.createElement('div');
+  shutdownMsg.className = 'text-center text-red-600 font-bold';
+  shutdownMsg.textContent = '⚠️ Admin has initiated shutdown.';
+  messages.appendChild(shutdownMsg);
+
+  input.disabled = true;
+  sendButton.disabled = true;
 });
