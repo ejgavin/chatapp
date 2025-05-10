@@ -187,7 +187,7 @@ io.on('connection', (socket) => {
         secondsRemaining--;
       } else {
         clearInterval(countdownInterval);
-        broadcastSystemMessage('🔁 Server is now restarting...');
+        broadcastSystemMessage('🔁 Server is now restarting (takes about 1 - 2 minutes)...');
 
         // Allow the message to broadcast before shutdown
         setTimeout(() => {
