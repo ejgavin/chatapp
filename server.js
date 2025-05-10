@@ -21,6 +21,18 @@ if (fs.existsSync(CHAT_HISTORY_FILE)) {
   }
 }
 
+// Middleware to log each HTTP request
+app.use((req, res, next) => {
+  console.log(`📥 HTTP Request:
+  ├─ IP: ${req.ip}
+  ├─ Method: ${req.method}
+  ├─ URL: ${req.originalUrl}
+  ├─ Headers: ${JSON.stringify(req.headers, null, 2)}
+  └─ Query Params: ${JSON.stringify(req.query)}
+  `);
+  next();
+});
+
 // Serve static files
 app.use(express.static('public'));
 
@@ -50,14 +62,28 @@ function saveChatHistory() {
 }
 
 io.on('connection', (socket) => {
-  console.log('✅ A user connected:', socket.id);
+  const handshake = socket.handshake;
 
-  // Send chat history to the newly connected user
+  console.log(`✅ New WebSocket connection:
+  ├─ Socket ID: ${socket.id}
+  ├─ IP: ${handshake.address}
+  ├─ User-Agent: ${handshake.headers['user-agent']}
+  ├─ Time: ${new Date().toISOString()}
+  ├─ Headers: ${JSON.stringify(handshake.headers, null, 2)}
+  └─ Query: ${JSON.stringify(handshake.query)}
+  `);
+
+  // Send chat history
   socket.emit('chat history', chatHistory);
 
   socket.on('new user', (username, color, avatar) => {
     const user = { username, socketId: socket.id, color, avatar };
     users.push(user);
+    console.log(`👤 User joined:
+    ├─ Username: ${username}
+    ├─ Color: ${color}
+    └─ Avatar: ${avatar}
+    `);
     io.emit('update users', users);
     broadcastSystemMessage(`${username} has joined the chat.`);
   });
@@ -71,6 +97,11 @@ io.on('connection', (socket) => {
       avatar: user?.avatar || 'A',
       time: getCurrentTime(),
     };
+    console.log(`💬 Message received:
+    ├─ From: ${msg.user}
+    ├─ Message: ${msg.text}
+    └─ Time: ${msg.time}
+    `);
     io.emit('chat message', msg);
     chatHistory.push(msg);
     saveChatHistory();
@@ -80,11 +111,17 @@ io.on('connection', (socket) => {
     const sender = users.find(u => u.socketId === socket.id);
     const recipient = users.find(u => u.username === data.recipient);
     if (recipient && sender) {
+      console.log(`📩 Private message:
+      ├─ From: ${sender.username}
+      ├─ To: ${recipient.username}
+      └─ Text: ${data.message}
+      `);
       io.to(recipient.socketId).emit('private message', {
         user: sender.username,
         text: data.message,
       });
     } else {
+      console.log(`⚠️ Private message failed: recipient not found.`);
       socket.emit('error', `User ${data.recipient} not found`);
     }
   });
@@ -92,6 +129,10 @@ io.on('connection', (socket) => {
   socket.on('typing', (isTyping) => {
     const user = users.find(u => u.socketId === socket.id);
     if (user) {
+      console.log(`✍️ Typing status:
+      ├─ User: ${user.username}
+      └─ Is typing: ${isTyping}
+      `);
       socket.broadcast.emit('typing', {
         user: user.username,
         isTyping,
@@ -104,6 +145,10 @@ io.on('connection', (socket) => {
     if (user) {
       const oldUsername = user.username;
       user.username = newUsername;
+      console.log(`🔁 Username changed:
+      ├─ From: ${oldUsername}
+      └─ To: ${newUsername}
+      `);
       io.emit('update users', users);
       broadcastSystemMessage(`${oldUsername} changed username to ${newUsername}.`);
     }
@@ -113,9 +158,14 @@ io.on('connection', (socket) => {
     const index = users.findIndex(u => u.socketId === socket.id);
     if (index !== -1) {
       const [user] = users.splice(index, 1);
-      console.log(`❌ ${user.username} disconnected`);
+      console.log(`❌ Disconnected:
+      ├─ Username: ${user.username}
+      └─ Socket ID: ${socket.id}
+      `);
       io.emit('update users', users);
       broadcastSystemMessage(`${user.username} has left the chat.`);
+    } else {
+      console.log(`❌ Unknown user disconnected: Socket ID: ${socket.id}`);
     }
   });
 });
