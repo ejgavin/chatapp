@@ -251,47 +251,70 @@ function displayMessage(msg) {
       <div class="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-white text-sm font-bold" style="background-color: ${msg.color}">
         ${msg.avatar}
       </div>
-      <div class="text-sm text-gray-700 font-semibold">${msg.username}</div>
+      <span class="text-sm font-medium" style="color: ${msg.color}">${msg.user}</span>
+      <span class="text-xs text-gray-500">${msg.time}</span>
     </div>
-    <div class="text-gray-600">${sanitize(msg.text)}</div>
+    <div class="ml-8">${sanitize(msg.text)}</div>
   `;
   messages.appendChild(item);
   messages.scrollTop = messages.scrollHeight;
 }
 
-function sanitize(text) {
-  return text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-function logChatMessage(message) {
+// Log chat message (general and private)
+function logChatMessage(text) {
   const item = document.createElement('div');
-  item.classList.add('log-message');
-  item.textContent = message;
+  item.innerHTML = `<div class="text-gray-500 text-sm italic">${text}</div>`;
   messages.appendChild(item);
   messages.scrollTop = messages.scrollHeight;
 }
 
-// Start idle detection logic
-function startIdleDetection() {
-  resetIdleTimeout();
-  document.addEventListener('mousemove', resetIdleTimeout);
-  document.addEventListener('keydown', resetIdleTimeout);
+function logPrivateMessage(text) {
+  const item = document.createElement('div');
+  item.innerHTML = `
+    <div class="bg-blue-100 p-2 rounded-md">
+      <strong>Private to ${privateRecipient}: </strong>${sanitize(text)}
+    </div>
+  `;
+  messages.appendChild(item);
+  messages.scrollTop = messages.scrollHeight;
 }
 
-function resetIdleTimeout() {
+function sanitize(input) {
+  const div = document.createElement('div');
+  div.innerText = input;
+  return div.innerHTML;
+}
+
+// Start idle detection
+function startIdleDetection() {
+  document.addEventListener('mousemove', resetIdleTimer);
+  document.addEventListener('keypress', resetIdleTimer);
+}
+
+// Reset idle timer
+function resetIdleTimer() {
   clearTimeout(idleTimeout);
-  userStatus = 'active';
   idleTimeout = setTimeout(() => {
     userStatus = 'idle';
-    socket.emit('status change', userStatus);
+    socket.emit('update status', { status: 'idle' });
   }, idleLimit);
+
+  lastInteractionTime = Date.now();  // Update last interaction time
 }
 
+// Start status logging every 15 seconds
 function startStatusLogging() {
   setInterval(() => {
-    const elapsedTime = Date.now() - lastInteractionTime;
-    socket.emit('status log', { userStatus, elapsedTime });
+    const idleDuration = Math.round((Date.now() - lastInteractionTime) / 1000);
+    console.log(`User ${username} status: ${userStatus} (Last interaction: ${idleDuration} seconds ago)`);
   }, statusLogInterval);
 }
 
-socket.emit('username status', username);
+// Socket.io updates for idle status
+socket.on('update status', ({ username, status }) => {
+  const userElement = document.querySelector(`[data-username="${username}"]`);
+  if (userElement) {
+    const statusText = status === 'idle' ? '(Idle)' : '';
+    userElement.innerHTML = `${username} ${statusText}`;
+  }
+});

@@ -38,10 +38,15 @@ app.use(express.static('public'));
 
 const users = [];
 
+// Store user statuses
+const userStatuses = {};
+
+// Get current time in a specific timezone
 function getCurrentTime() {
   return new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York' });
 }
 
+// Broadcast system message to all users
 function broadcastSystemMessage(text) {
   const message = {
     user: 'Server',
@@ -55,122 +60,109 @@ function broadcastSystemMessage(text) {
   saveChatHistory();
 }
 
+// Save chat history to file
 function saveChatHistory() {
   fs.writeFile(CHAT_HISTORY_FILE, JSON.stringify(chatHistory, null, 2), (err) => {
     if (err) console.error('Error saving chat history:', err);
   });
 }
 
+// Handle new connections
 io.on('connection', (socket) => {
   const handshake = socket.handshake;
+  let username = '';
 
-  console.log(`✅ New WebSocket connection:
-  ├─ Socket ID: ${socket.id}
-  ├─ IP: ${handshake.address}
-  ├─ User-Agent: ${handshake.headers['user-agent']}
-  ├─ Time: ${new Date().toISOString()}
-  ├─ Headers: ${JSON.stringify(handshake.headers, null, 2)}
-  └─ Query: ${JSON.stringify(handshake.query)}
-  `);
-
-  // Send chat history
-  socket.emit('chat history', chatHistory);
-
-  socket.on('new user', (username, color, avatar) => {
-    const user = { username, socketId: socket.id, color, avatar };
-    users.push(user);
-    console.log(`👤 User joined:
-    ├─ Username: ${username}
-    ├─ Color: ${color}
-    └─ Avatar: ${avatar}
-    `);
+  // When a new user joins
+  socket.on('new user', (user, color, avatar) => {
+    username = user;
+    users.push({ username, socketId: socket.id, color, avatar, status: 'active' });
+    userStatuses[username] = 'active';
     io.emit('update users', users);
-    broadcastSystemMessage(`${username} has joined the chat.`);
-  });
 
-  socket.on('chat message', (message) => {
-    const user = users.find(u => u.socketId === socket.id);
-    const msg = {
-      user: user?.username || 'Anonymous',
-      text: message,
-      color: user?.color || '#000000',
-      avatar: user?.avatar || 'A',
+    const message = {
+      user: 'Server',
+      text: `${username} has joined the chat`,
+      color: '#000000',
+      avatar: 'S',
       time: getCurrentTime(),
     };
-    console.log(`💬 Message received:
-    ├─ From: ${msg.user}
-    ├─ Message: ${msg.text}
-    └─ Time: ${msg.time}
-    `);
-    io.emit('chat message', msg);
-    chatHistory.push(msg);
-    saveChatHistory();
+    io.emit('chat message', message);
   });
 
-  socket.on('private message', (data) => {
-    const sender = users.find(u => u.socketId === socket.id);
-    const recipient = users.find(u => u.username === data.recipient);
-    if (recipient && sender) {
-      console.log(`📩 Private message:
-      ├─ From: ${sender.username}
-      ├─ To: ${recipient.username}
-      └─ Text: ${data.message}
-      `);
-      io.to(recipient.socketId).emit('private message', {
-        user: sender.username,
-        text: data.message,
-      });
-    } else {
-      console.log(`⚠️ Private message failed: recipient not found.`);
-      socket.emit('error', `User ${data.recipient} not found`);
-    }
-  });
-
+  // Handle typing indicator
   socket.on('typing', (isTyping) => {
-    const user = users.find(u => u.socketId === socket.id);
-    if (user) {
-      console.log(`✍️ Typing status:
-      ├─ User: ${user.username}
-      └─ Is typing: ${isTyping}
-      `);
-      socket.broadcast.emit('typing', {
-        user: user.username,
-        isTyping,
+    const typingData = { user: username, isTyping };
+    socket.broadcast.emit('typing', typingData);
+  });
+
+  // Handle private messages
+  socket.on('private message', ({ recipient, message }) => {
+    const recipientSocket = users.find(u => u.username === recipient);
+    if (recipientSocket) {
+      socket.to(recipientSocket.socketId).emit('private message', {
+        user: username,
+        text: message,
+        time: getCurrentTime(),
       });
     }
   });
 
+  // Handle username changes
   socket.on('username changed', (newUsername) => {
-    const user = users.find(u => u.socketId === socket.id);
-    if (user) {
-      const oldUsername = user.username;
-      user.username = newUsername;
-      console.log(`🔁 Username changed:
-      ├─ From: ${oldUsername}
-      └─ To: ${newUsername}
-      `);
+    const userIndex = users.findIndex(u => u.username === username);
+    if (userIndex > -1) {
+      users[userIndex].username = newUsername;
+      userStatuses[newUsername] = userStatuses[username];
+      delete userStatuses[username];
+      username = newUsername;
+
       io.emit('update users', users);
-      broadcastSystemMessage(`${oldUsername} changed username to ${newUsername}.`);
+      const message = {
+        user: 'Server',
+        text: `${username} has changed their username.`,
+        color: '#000000',
+        avatar: 'S',
+        time: getCurrentTime(),
+      };
+      io.emit('chat message', message);
     }
   });
 
-  socket.on('disconnect', () => {
-    const index = users.findIndex(u => u.socketId === socket.id);
-    if (index !== -1) {
-      const [user] = users.splice(index, 1);
-      console.log(`❌ Disconnected:
-      ├─ Username: ${user.username}
-      └─ Socket ID: ${socket.id}
-      `);
+  // Handle user idle status
+  socket.on('update status', ({ status }) => {
+    userStatuses[username] = status;
+    io.emit('update status', { username, status });
+
+    // Update user status on the list
+    const user = users.find(u => u.username === username);
+    if (user) {
+      user.status = status;
       io.emit('update users', users);
-      broadcastSystemMessage(`${user.username} has left the chat.`);
-    } else {
-      console.log(`❌ Unknown user disconnected: Socket ID: ${socket.id}`);
+    }
+  });
+
+  // When a user disconnects
+  socket.on('disconnect', () => {
+    const userIndex = users.findIndex(u => u.socketId === socket.id);
+    if (userIndex > -1) {
+      const user = users[userIndex];
+      users.splice(userIndex, 1);
+      delete userStatuses[user.username];
+      io.emit('update users', users);
+
+      const message = {
+        user: 'Server',
+        text: `${user.username} has left the chat`,
+        color: '#000000',
+        avatar: 'S',
+        time: getCurrentTime(),
+      };
+      io.emit('chat message', message);
     }
   });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
+// Start server
+server.listen(3000, () => {
+  console.log('Server is running on http://localhost:3000');
 });
