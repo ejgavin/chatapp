@@ -33,7 +33,7 @@ app.use((req, res, next) => {
 app.use(express.static('public'));
 
 const users = [];
-const IDLE_TIMEOUT = 90 * 1000; // 1.5 minutes
+const IDLE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
 function getCurrentTime() {
   return new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York' });
