@@ -37,6 +37,8 @@ let username = localStorage.getItem('username') || '';
 let userStatus = 'active';  // Track user activity status
 let idleTimeout = null;
 const idleLimit = 2 * 60 * 1000;  // 2 minutes
+let lastInteractionTime = Date.now();  // Track the last interaction time
+const statusLogInterval = 15 * 1000;  // 15 seconds
 
 const allowedNames = [
   "Emiliano", "Fiona", "Eliot", "Krishay", "Channing", "Anna", "Mayla",
@@ -79,6 +81,7 @@ function enterChat() {
     chatUI.classList.remove('hidden');
     usernameError.textContent = ''; // Clear error
     startIdleDetection();  // Start idle detection when user enters chat
+    startStatusLogging();  // Start status logging every 15 seconds
   }
 }
 
@@ -269,33 +272,42 @@ function logPrivateMessage(text) {
   const item = document.createElement('div');
   item.innerHTML = `
     <div class="bg-blue-100 p-2 rounded-md">
-      <strong>Private to ${privateRecipient}:</strong> ${sanitize(text)}
+      <strong>Private to ${privateRecipient}: </strong>${sanitize(text)}
     </div>
   `;
   messages.appendChild(item);
   messages.scrollTop = messages.scrollHeight;
 }
 
-// Sanitize user input for security
-function sanitize(str) {
-  const temp = document.createElement('div');
-  temp.textContent = str;
-  return temp.innerHTML;
+function sanitize(input) {
+  const div = document.createElement('div');
+  div.innerText = input;
+  return div.innerHTML;
 }
 
-// Idle detection functions
+// Start idle detection
 function startIdleDetection() {
-  resetIdleTimer(); // Reset timer initially
   document.addEventListener('mousemove', resetIdleTimer);
-  document.addEventListener('keydown', resetIdleTimer);
+  document.addEventListener('keypress', resetIdleTimer);
 }
 
+// Reset idle timer
 function resetIdleTimer() {
   clearTimeout(idleTimeout);
   idleTimeout = setTimeout(() => {
     userStatus = 'idle';
     socket.emit('update status', { status: 'idle' });
   }, idleLimit);
+
+  lastInteractionTime = Date.now();  // Update last interaction time
+}
+
+// Start status logging every 15 seconds
+function startStatusLogging() {
+  setInterval(() => {
+    const idleDuration = Math.round((Date.now() - lastInteractionTime) / 1000);
+    console.log(`User ${username} status: ${userStatus} (Last interaction: ${idleDuration} seconds ago)`);
+  }, statusLogInterval);
 }
 
 // Socket.io updates for idle status
