@@ -122,16 +122,15 @@ socket.on('chat message', msg => {
 socket.on('private message', msg => {
   const item = document.createElement('div');
   item.innerHTML =
-    <div class="bg-green-100 p-2 rounded-md">
+    `<div class="bg-green-100 p-2 rounded-md">
       <strong>Private from ${msg.user}: </strong>${sanitize(msg.text)}
-    </div>
-  ;
+    </div>`;
   messages.appendChild(item);
   messages.scrollTop = messages.scrollHeight;
 });
 
 socket.on('typing', data => {
-  typingIndicator.textContent = data.isTyping ? ${data.user} is typing... : '';
+  typingIndicator.textContent = data.isTyping ? `${data.user} is typing...` : '';
   chatType.textContent = privateRecipient ? 'Private Chat' : 'Public Chat';
   currentChatWith.textContent = privateRecipient ? privateRecipient : 'No one';
 });
@@ -144,14 +143,13 @@ socket.on('update users', users => {
     const userItem = document.createElement('li');
     userItem.classList.add('relative', 'group');
     userItem.innerHTML =
-      <button class="text-blue-600 underline hover:text-blue-800" data-username="${user.username}">
+      `<button class="text-blue-600 underline hover:text-blue-800" data-username="${user.username}">
         ${user.username}
-      </button>
-    ;
+      </button>`;
     const nameBtn = userItem.querySelector('button');
     nameBtn.addEventListener('click', () => {
       privateRecipient = user.username;
-      logChatMessage(Started private chat with ${user.username});
+      logChatMessage(`Started private chat with ${user.username}`);
       chatType.textContent = 'Private Chat';
       currentChatWith.textContent = privateRecipient;
     });
@@ -182,7 +180,7 @@ closeSettingsButton.addEventListener('click', () => {
 startPrivateChatButton.addEventListener('click', () => {
   privateRecipient = privateChatInput.value.trim();
   if (privateRecipient) {
-    logChatMessage(Started private chat with ${privateRecipient});
+    logChatMessage(`Started private chat with ${privateRecipient}`);
     settingsModal.classList.add('hidden');
     chatType.textContent = 'Private Chat';
     currentChatWith.textContent = privateRecipient;
@@ -218,7 +216,7 @@ changeUsernameButton.addEventListener('click', () => {
     socket.emit('username changed', capitalizedUsername);
     username = capitalizedUsername;
     localStorage.setItem('username', username);
-    logChatMessage(Username changed to ${capitalizedUsername});
+    logChatMessage(`Username changed to ${capitalizedUsername}`);
     changeUsernameInput.value = '';
     settingsModal.classList.add('hidden');
   } else {
@@ -230,22 +228,21 @@ function displayMessage(msg) {
   const item = document.createElement('div');
   item.classList.add('message-item');
   item.innerHTML =
-    <div class="flex items-center space-x-2 mb-1">
+    `<div class="flex items-center space-x-2 mb-1">
       <div class="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-white text-sm font-bold" style="background-color: ${msg.color}">
         ${msg.avatar}
       </div>
       <span class="text-sm font-medium" style="color: ${msg.color}">${msg.user}</span>
       <span class="text-xs text-gray-500">${msg.time}</span>
     </div>
-    <div class="ml-8">${sanitize(msg.text)}</div>
-  ;
+    <div class="ml-8">${sanitize(msg.text)}</div>`;
   messages.appendChild(item);
   messages.scrollTop = messages.scrollHeight;
 }
 
 function logChatMessage(text) {
   const item = document.createElement('div');
-  item.innerHTML = <div class="text-gray-500 text-sm italic">${text}</div>;
+  item.innerHTML = `<div class="text-gray-500 text-sm italic">${text}</div>`;
   messages.appendChild(item);
   messages.scrollTop = messages.scrollHeight;
 }
@@ -253,10 +250,9 @@ function logChatMessage(text) {
 function logPrivateMessage(text) {
   const item = document.createElement('div');
   item.innerHTML =
-    <div class="bg-blue-100 p-2 rounded-md">
+    `<div class="bg-blue-100 p-2 rounded-md">
       <strong>Private to ${privateRecipient}:</strong> ${sanitize(text)}
-    </div>
-  ;
+    </div>`;
   messages.appendChild(item);
   messages.scrollTop = messages.scrollHeight;
 }
