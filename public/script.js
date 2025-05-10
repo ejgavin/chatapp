@@ -1,11 +1,14 @@
 const socket = io();
 let privateRecipient = null;
+let isChatPaused = false;
 
+// DOM Elements
 const chatUI = document.getElementById('chat-ui');
 const usernameScreen = document.getElementById('username-screen');
+const pausedChatScreen = document.getElementById('paused-chat-screen');
 const usernameInput = document.getElementById('username-input');
 const enterChatBtn = document.getElementById('enter-chat-btn');
-const usernameError = document.getElementById('username-error'); // NEW: Error element
+const usernameError = document.getElementById('username-error');
 
 const input = document.getElementById('message-input');
 const sendButton = document.getElementById('send-btn');
@@ -29,19 +32,20 @@ const changeUsernameInput = document.getElementById('change-username-input');
 const changeUsernameButton = document.getElementById('change-username-btn');
 const onlineUsersList = document.getElementById('online-users');
 
+// Admin login elements
+const adminLoginBtn = document.getElementById('admin-login-btn');
+const adminPasswordInput = document.getElementById('admin-password-input');
+const submitAdminLoginBtn = document.getElementById('submit-admin-login');
+const adminLoginError = document.getElementById('admin-login-error');
+
+// Typing indicator setup
 const typingIndicator = document.createElement('div');
 typingIndicator.classList.add('text-sm', 'text-gray-500', 'mt-2', 'typing-indicator');
 messages.parentElement.insertBefore(typingIndicator, messages.nextSibling);
 
+// Username handling
 let username = localStorage.getItem('username') || '';
-
-const allowedNames = [
-  "Emiliano", "Fiona", "Eliot", "Krishay", "Channing", "Anna", "Mayla",
-  "Adela", "Nathaniel", "Noah", "Stefan", "Michael", "Adam", "Nicholas",
-  "Samuel", "Jonah", "Amber", "Annie", "Conor", "Christopher", "Seneca",
-  "Magnus", "Jace", "Martin", "Daehan", "Charles", "Ava",
-  "Dexter", "Charlie", "Nick", "Sam", "Nate", "Aleksander", "Alek", "Eli"
-];
+const allowedNames = [/* your allowed names list */];
 
 function capitalizeFirstLetter(name) {
   return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
@@ -72,7 +76,7 @@ function enterChat() {
     socket.emit('new user', username, color, avatar);
     usernameScreen.classList.add('hidden');
     chatUI.classList.remove('hidden');
-    usernameError.textContent = ''; // Clear error
+    usernameError.textContent = '';
   }
 }
 
@@ -82,12 +86,15 @@ usernameInput.addEventListener('keypress', (e) => {
 });
 
 function sendMessage() {
-  if (input.value.trim()) {
+  if (isChatPaused) return;
+
+  const text = input.value.trim();
+  if (text) {
     if (privateRecipient) {
-      socket.emit('private message', { recipient: privateRecipient, message: input.value });
-      logPrivateMessage(input.value);
+      socket.emit('private message', { recipient: privateRecipient, message: text });
+      logPrivateMessage(text);
     } else {
-      socket.emit('chat message', input.value);
+      socket.emit('chat message', text);
     }
     socket.emit('typing', false);
     input.value = '';
@@ -111,14 +118,10 @@ input.addEventListener('input', () => {
 });
 
 socket.on('chat history', (history) => {
-  history.forEach(msg => {
-    displayMessage(msg);
-  });
+  history.forEach(displayMessage);
 });
 
-socket.on('chat message', msg => {
-  displayMessage(msg);
-});
+socket.on('chat message', displayMessage);
 
 socket.on('private message', msg => {
   const item = document.createElement('div');
@@ -134,14 +137,13 @@ socket.on('private message', msg => {
 socket.on('typing', data => {
   typingIndicator.textContent = data.isTyping ? `${data.user} is typing...` : '';
   chatType.textContent = privateRecipient ? 'Private Chat' : 'Public Chat';
-  currentChatWith.textContent = privateRecipient ? privateRecipient : 'No one';
+  currentChatWith.textContent = privateRecipient || 'No one';
 });
 
 socket.on('update users', users => {
   onlineUsersList.innerHTML = '';
   users.forEach(user => {
     if (user.username === username) return;
-
     const userItem = document.createElement('li');
     userItem.classList.add('relative', 'group');
     userItem.innerHTML = `
@@ -149,8 +151,7 @@ socket.on('update users', users => {
         ${user.username}
       </button>
     `;
-    const nameBtn = userItem.querySelector('button');
-    nameBtn.addEventListener('click', () => {
+    userItem.querySelector('button').addEventListener('click', () => {
       privateRecipient = user.username;
       logChatMessage(`Started private chat with ${user.username}`);
       chatType.textContent = 'Private Chat';
@@ -160,6 +161,7 @@ socket.on('update users', users => {
   });
 });
 
+// Emoji picker
 emojiBtn.addEventListener('click', () => {
   emojiContainer.classList.remove('hidden');
 });
@@ -172,6 +174,7 @@ closeEmojiBtn.addEventListener('click', () => {
   emojiContainer.classList.add('hidden');
 });
 
+// Settings
 settingsBtn.addEventListener('click', () => {
   settingsModal.classList.remove('hidden');
 });
@@ -187,23 +190,16 @@ startPrivateChatButton.addEventListener('click', () => {
     settingsModal.classList.add('hidden');
     chatType.textContent = 'Private Chat';
     currentChatWith.textContent = privateRecipient;
-  } else {
-    logChatMessage('Please enter a valid username for private chat.');
   }
 });
 
-publicChatButton.addEventListener('click', () => {
-  privateRecipient = null;
-  logChatMessage('Switched to public chat.');
-  chatType.textContent = 'Public Chat';
-  currentChatWith.textContent = 'No one';
-});
-
-publicChatButtonTop.addEventListener('click', () => {
-  privateRecipient = null;
-  logChatMessage('Switched to public chat.');
-  chatType.textContent = 'Public Chat';
-  currentChatWith.textContent = 'No one';
+[publicChatButton, publicChatButtonTop].forEach(btn => {
+  btn.addEventListener('click', () => {
+    privateRecipient = null;
+    logChatMessage('Switched to public chat.');
+    chatType.textContent = 'Public Chat';
+    currentChatWith.textContent = 'No one';
+  });
 });
 
 changeUsernameButton.addEventListener('click', () => {
@@ -222,11 +218,10 @@ changeUsernameButton.addEventListener('click', () => {
     logChatMessage(`Username changed to ${capitalizedUsername}`);
     changeUsernameInput.value = '';
     settingsModal.classList.add('hidden');
-  } else {
-    logChatMessage('Please enter a valid new username.');
   }
 });
 
+// Message rendering
 function displayMessage(msg) {
   const item = document.createElement('div');
   item.classList.add('message-item');
@@ -267,3 +262,42 @@ function sanitize(str) {
   temp.textContent = str;
   return temp.innerHTML;
 }
+
+//
+// 🔻 ADMIN FEATURES START HERE 🔻
+//
+
+// Handle paused state from server
+socket.on('pause chat', () => {
+  isChatPaused = true;
+  chatUI.classList.add('hidden');
+  pausedChatScreen.classList.remove('hidden');
+});
+
+// Handle resumed state from server
+socket.on('resume chat', () => {
+  isChatPaused = false;
+  pausedChatScreen.classList.add('hidden');
+  chatUI.classList.remove('hidden');
+});
+
+// Admin login UI handlers
+adminLoginBtn.addEventListener('click', () => {
+  document.getElementById('admin-login-form').classList.remove('hidden');
+});
+
+submitAdminLoginBtn.addEventListener('click', () => {
+  const password = adminPasswordInput.value.trim();
+  socket.emit('admin login', password);
+});
+
+// Login feedback
+socket.on('admin login result', (success) => {
+  if (success) {
+    pausedChatScreen.classList.add('hidden');
+    chatUI.classList.remove('hidden');
+    isChatPaused = false;
+  } else {
+    adminLoginError.textContent = 'Incorrect password. Try again.';
+  }
+});

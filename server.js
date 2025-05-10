@@ -3,6 +3,7 @@ const http = require('http');
 const fs = require('fs');
 const { Server } = require('socket.io');
 const path = require('path');
+const crypto = require('crypto');
 
 const app = express();
 const server = http.createServer(app);
@@ -10,6 +11,13 @@ const io = new Server(server);
 
 const CHAT_HISTORY_FILE = path.join(__dirname, 'chat-history.json');
 let chatHistory = [];
+
+// Admin credentials (Base64 encoded password: eliadmin123)
+const ADMIN_USERNAME = 'admin';
+const ADMIN_PASSWORD_BASE64 = 'ZWxpYWRtaW4xMjM=';
+
+// Decode Base64 password
+const ADMIN_PASSWORD = Buffer.from(ADMIN_PASSWORD_BASE64, 'base64').toString('utf-8');
 
 // Load chat history from file
 if (fs.existsSync(CHAT_HISTORY_FILE)) {
@@ -151,6 +159,20 @@ io.on('connection', (socket) => {
       `);
       io.emit('update users', users);
       broadcastSystemMessage(`${oldUsername} changed username to ${newUsername}.`);
+    }
+  });
+
+  socket.on('pause chat', () => {
+    broadcastSystemMessage('The chat has been paused. Admin only can resume.');
+    io.emit('chat paused');
+  });
+
+  socket.on('resume chat', (password) => {
+    if (password === ADMIN_PASSWORD) {
+      broadcastSystemMessage('The chat has been resumed.');
+      io.emit('chat resumed');
+    } else {
+      socket.emit('error', 'Incorrect admin password');
     }
   });
 
