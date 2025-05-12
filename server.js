@@ -157,11 +157,20 @@ io.on('connection', socket => {
     broadcastSystemMessage(`${username} has joined the chat.`);
   });
 
-  socket.on('chat message', message => {
-    if (tempDisableState) {
-      sendPrivateSystemMessage(socket, '❌ Admin has enabled temp chat disable. You cannot send messages.');
-      return;
-    }
+    socket.on('chat message', message => {
+      const trimmed = message.trim().toLowerCase();
+      const record = tempAdminState[socket.id];
+      const isAdminCommand = trimmed.startsWith('server init');
+
+      if (tempDisableState && (!isAdminCommand || trimmed === 'server init' || !record?.tempAdminGranted)) {
+        sendPrivateSystemMessage(socket, '❌ Admin has enabled temp chat disable. You cannot send messages.');
+        return;
+      }
+
+      if (isAdminCommand && !record?.tempAdminGranted && trimmed !== 'server init') {
+        sendPrivateSystemMessage(socket, `❌ You are not authorized to ${trimmed}`);
+        return;
+      }
 
     const user = users.find(u => u.socketId === socket.id);
     if (!user) return;
