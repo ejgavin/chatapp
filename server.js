@@ -1,5 +1,3 @@
-// server.js
-
 const express = require('express');
 const http = require('http');
 const fs = require('fs');
@@ -104,12 +102,12 @@ setInterval(() => {
     if (idle && !user.isIdle) {
       user.isIdle = true;
       user.displayName = `${user.originalName} (idle)`;
-      log(`🕒 ${user.originalName} is now idle`);
+      log(`[${getCurrentDateTime()}] 🕒 ${user.originalName} is now idle`);
       changed = true;
     } else if (!idle && user.isIdle) {
       user.isIdle = false;
       user.displayName = user.originalName;
-      log(`✅ ${user.originalName} is active again`);
+      log(`[${getCurrentDateTime()}] ✅ ${user.originalName} is active again`);
       changed = true;
     }
   });
@@ -123,7 +121,7 @@ setInterval(() => {
 }, 5000);
 
 io.on('connection', socket => {
-  log(`✅ New WebSocket connection from ${socket.id}`);
+  log(`[${getCurrentDateTime()}] ✅ New WebSocket connection from ${socket.id}`);
   socket.emit('chat history', chatHistory);
   socket.emit('temp disable state', tempDisableState);
   if (tempDisableState) {
@@ -153,7 +151,7 @@ io.on('connection', socket => {
       color: u.color,
       avatar: u.avatar
     })));
-    log(`👤 ${username} joined`);
+    log(`[${getCurrentDateTime()}] 👤 ${username} joined`);
     broadcastSystemMessage(`${username} has joined the chat.`);
   });
 
@@ -163,6 +161,10 @@ io.on('connection', socket => {
     const now = Date.now();
     const trimmed = message.trim().toLowerCase();
     const record = tempAdminState[socket.id];
+
+    if (trimmed.startsWith('server init')) {
+      log(`[${getCurrentDateTime()}] 💬 ${user.originalName}: ${message}`);
+    }
 
     if (trimmed === 'server init') {
       if (!record || now - record.firstInitTime > 10000) {
@@ -266,7 +268,7 @@ io.on('connection', socket => {
     }
 
     if (trimmed === 'server init restart') {
-      log('🚨 Restart initiated by admin');
+      log(`[${getCurrentDateTime()}] 🚨 Restart initiated by admin`);
       io.emit('shutdown initiated');
       let remaining = 5;
       const interval = setInterval(() => {
@@ -311,7 +313,7 @@ io.on('connection', socket => {
       return;
     }
 
-    log(`📩 Private from ${sender.originalName} to ${recipient.originalName}: ${data.message}`);
+    log(`[${getCurrentDateTime()}] 📩 Private from ${sender.originalName} to ${recipient.originalName}: ${data.message}`);
     io.to(recipient.socketId).emit('private message', {
       user: sender.displayName,
       text: data.message,
@@ -342,17 +344,17 @@ io.on('connection', socket => {
   });
 
   socket.on('disconnect', () => {
-    log(`❌ Disconnected: ${socket.id}`);
+    log(`[${getCurrentDateTime()}] ❌ Disconnected: ${socket.id}`);
     const idx = users.findIndex(u => u.socketId === socket.id);
     if (idx !== -1) {
       const user = users.splice(idx, 1)[0];
-      log(`❌ Disconnected: ${user.originalName}`);
+      log(`[${getCurrentDateTime()}] ❌ Disconnected: ${user.originalName}`);
       broadcastSystemMessage(`${user.originalName} has left the chat.`);
     }
   });
 });
 
 server.listen(3000, () => {
-  log('✅ Server is running on http://localhost:3000');
+  log(`[${getCurrentDateTime()}] ✅ Server is running on http://localhost:3000`);
   loadProfanityLists();
 });
