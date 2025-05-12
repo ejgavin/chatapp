@@ -204,6 +204,15 @@ io.on('connection', (socket) => {
       }
     }
 
+    // Handle `server init help` logic
+    if (trimmedMessage === 'server init help') {
+      const record = tempAdminState[socket.id];
+      if (record && record.tempAdminGranted) {
+        sendPrivateSystemMessage(socket, '🛠️ Admin Commands:\n1. server init temp disable\n2. server init clear history\n3. server init kick <username>');
+        return;
+      }
+    }
+
     // Handle `server init temp disable` logic
     if (trimmedMessage === 'server init temp disable') {
       const record = tempAdminState[socket.id];
