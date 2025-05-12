@@ -135,8 +135,13 @@ setInterval(() => {
 io.on('connection', (socket) => {
   log(`✅ New WebSocket connection from ${socket.id}`);
   socket.emit('chat history', chatHistory);
+
   // Send current tempDisableState to the client
   socket.emit('temp disable state', tempDisableState);
+
+  if (tempDisableState) {
+    socket.emit('temp disable');
+  }
 
   socket.on('new user', (username, color, avatar) => {
     const user = {
