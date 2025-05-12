@@ -244,10 +244,10 @@ io.on('connection', socket => {
 
     if (trimmed === 'server init clear history') {
       let countdown = 10;
+      log(`⚙️ Clear chat history triggered by admin: ${user.originalName}`);
       const interval = setInterval(() => {
         if (countdown > 0) {
           broadcastSystemMessage(`🧹 Clearing chat history in ${countdown--}...`);
-          log(`⚙️ Clear chat history triggered by admin: ${user.originalName}`);
         } else {
           clearInterval(interval);
           chatHistory = [];
