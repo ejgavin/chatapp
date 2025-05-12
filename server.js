@@ -79,7 +79,7 @@ async function loadProfanityLists() {
   try {
     const [cmu, zac] = await Promise.all([
       axios.get('https://www.cs.cmu.edu/~biglou/resources/bad-words.txt'),
-      axios.get('https://raw.githubusercontent.com/zacanger/profane-words/master/words.json'),
+      axios.get('https://raw.githubusercontent.com/zacanger/profane-words/master/words.json')
     ]);
     const cmuWords = cmu.data.split('\n').map(w => w.trim().toLowerCase()).filter(Boolean);
     const zacWords = zac.data.map(w => w.trim().toLowerCase());
@@ -90,8 +90,10 @@ async function loadProfanityLists() {
   }
 }
 
+// Enhanced profanity check that considers all possible combinations of characters, including with spaces
 function containsProfanity(msg) {
-  return msg.toLowerCase().split(/\s+/).some(word => profanityList.has(word));
+  const normalizedMsg = msg.toLowerCase().replace(/\s+/g, ''); // Remove spaces
+  return [...profanityList].some(profaneWord => normalizedMsg.includes(profaneWord));
 }
 
 setInterval(() => {
