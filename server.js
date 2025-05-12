@@ -32,7 +32,7 @@ const kickedUsers = {};
 let tempDisableState = false;
 
 const lastMessageTimestamps = {}; // socket.id → timestamp of last message
-const SLOW_MODE_INTERVAL = 3000; // 3 seconds
+const SLOW_MODE_INTERVAL = 2000; // 2 seconds
 
 function getCurrentTime() {
   return new Date().toLocaleTimeString('en-US', {
