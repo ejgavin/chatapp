@@ -182,7 +182,7 @@ io.on('connection', (socket) => {
         log('⚙️ Temp disable triggered by admin');
 
         setTimeout(() => {
-          socket.broadcast.emit('temp disable');
+          io.emit('temp disable');
           broadcastSystemMessage('Admin Has Enabled Temp Disable');
         }, 2000);
 
