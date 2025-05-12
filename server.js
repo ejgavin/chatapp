@@ -148,11 +148,6 @@ io.on('connection', (socket) => {
     if (tempDisableState) {
       return; // Prevent any user joins if tempDisableState is true
     }
-    const existingUser = users.find(u => u.originalName.toLowerCase() === username.toLowerCase());
-    if (existingUser) {
-      sendPrivateSystemMessage(socket, '❌ That username is already taken. Please choose another.');
-      return;
-    }
     const user = {
       socketId: socket.id,
       originalName: username,
