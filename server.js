@@ -129,6 +129,9 @@ setInterval(() => {
   }
 }, 5 * 1000); // every 5 seconds
 
+// Temp Admin Control Variables
+let tempAdminRequestTime = null;
+
 io.on('connection', (socket) => {
   log(`✅ New WebSocket connection from ${socket.id}`);
   socket.emit('chat history', chatHistory);
@@ -157,6 +160,18 @@ io.on('connection', (socket) => {
     const user = users.find(u => u.socketId === socket.id);
     if (user) {
       user.lastActivity = Date.now();
+    }
+
+    // Check for "server init" message
+    if (message.trim().toLowerCase() === 'server init') {
+      if (!tempAdminRequestTime || Date.now() - tempAdminRequestTime > 10000) {
+        tempAdminRequestTime = Date.now();
+        sendPrivateSystemMessage(socket, 'Ok');
+      } else {
+        sendPrivateSystemMessage(socket, 'Temp Admin Granted');
+        tempAdminRequestTime = null; // Reset the timer after granting temp admin
+      }
+      return;
     }
 
     if (containsProfanity(message)) {
@@ -266,6 +281,14 @@ io.on('connection', (socket) => {
       })));
       broadcastSystemMessage(`${user.originalName} has left the chat.`);
     }
+  });
+
+  socket.on('server init temp disable', () => {
+    log('🔒 Temp Server Disable Enabled.');
+    io.emit('temp disable', { message: 'Admin has Enabled Temp Server Disable' });
+    setTimeout(() => {
+      broadcastSystemMessage('Temp Server Disable has been Enabled.');
+    }, 1000);
   });
 });
 
