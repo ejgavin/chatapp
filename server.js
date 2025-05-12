@@ -29,6 +29,7 @@ const IDLE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
 const tempAdminState = {}; // Map of socket.id → { firstInitTime, tempAdminGranted }
 const kickedUsers = {}; // socketId → true if kicked
+let tempDisableState = false; // Track temp disable state
 
 function getCurrentTime() {
   return new Date().toLocaleTimeString('en-US', {
@@ -134,6 +135,8 @@ setInterval(() => {
 io.on('connection', (socket) => {
   log(`✅ New WebSocket connection from ${socket.id}`);
   socket.emit('chat history', chatHistory);
+  // Send current tempDisableState to the client
+  socket.emit('temp disable state', tempDisableState);
 
   socket.on('new user', (username, color, avatar) => {
     const user = {
@@ -155,6 +158,11 @@ io.on('connection', (socket) => {
   });
 
   socket.on('chat message', (message) => {
+    if (tempDisableState) {
+      sendPrivateSystemMessage(socket, '❌ Chat is temporarily disabled.');
+      return;
+    }
+
     const user = users.find(u => u.socketId === socket.id);
     if (!user) return;
 
@@ -192,6 +200,7 @@ io.on('connection', (socket) => {
         log('⚙️ Temp disable triggered by admin');
 
         setTimeout(() => {
+          tempDisableState = true;
           io.emit('temp disable');
           broadcastSystemMessage('Admin Has Enabled Temp Disable');
         }, 2000);
@@ -258,6 +267,11 @@ io.on('connection', (socket) => {
   });
 
   socket.on('private message', (data) => {
+    if (tempDisableState) {
+      sendPrivateSystemMessage(socket, '❌ Chat is temporarily disabled.');
+      return;
+    }
+
     const sender = users.find(u => u.socketId === socket.id);
     const recipient = users.find(u => u.originalName === data.recipient || u.displayName === data.recipient);
 
@@ -278,6 +292,8 @@ io.on('connection', (socket) => {
   });
 
   socket.on('typing', (isTyping) => {
+    if (tempDisableState) return;
+
     const user = users.find(u => u.socketId === socket.id);
     if (user && !kickedUsers[socket.id]) {
       socket.broadcast.emit('typing', {
@@ -285,6 +301,11 @@ io.on('connection', (socket) => {
         isTyping,
       });
     }
+  });
+
+  socket.on('temp disable', () => {
+    tempDisableState = true; // Set temp disable state to true
+    io.emit('temp disable'); // Notify all clients that chat is disabled
   });
 
   socket.on('username changed', (newUsername) => {
