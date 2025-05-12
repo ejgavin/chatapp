@@ -63,6 +63,17 @@ function saveChatHistory() {
   });
 }
 
+function sendPrivateSystemMessage(socket, text) {
+  const message = {
+    user: 'Server',
+    text,
+    color: '#000000',
+    avatar: 'S',
+    time: getCurrentTime(),
+  };
+  socket.emit('private message', message);
+}
+
 // Load bad words from external sources
 let badWords = [];
 const profanityUrls = [
@@ -156,6 +167,7 @@ io.on('connection', (socket) => {
     if (user) {
       user.lastActivity = Date.now();
     }
+
     const msg = {
       user: user?.displayName || 'Anonymous',
       text: message,
@@ -163,18 +175,19 @@ io.on('connection', (socket) => {
       avatar: user?.avatar || 'A',
       time: getCurrentTime(),
     };
+
     log(`💬 ${msg.user}: ${msg.text}`);
 
     if (containsProfanity(msg.text)) {
       log(`🚫 Message blocked due to profanity: ${msg.text}`);
-      const warningMsg = {
+      const warningMessage = {
         user: 'Server',
         text: '❌ Your message was blocked due to profanity.',
         color: '#000000',
         avatar: 'S',
         time: getCurrentTime(),
       };
-      socket.emit('chat message', warningMsg);
+      socket.emit('chat message', warningMessage); // <-- This sends a visible chat-style message just to them
       return;
     }
 
@@ -194,14 +207,7 @@ io.on('connection', (socket) => {
 
     if (containsProfanity(data.message)) {
       log(`🚫 Private message blocked from ${sender.displayName} to ${recipient.displayName}: ${data.message}`);
-      const warningMsg = {
-        user: 'Server',
-        text: '❌ Your private message was blocked due to profanity.',
-        color: '#000000',
-        avatar: 'S',
-        time: getCurrentTime(),
-      };
-      socket.emit('chat message', warningMsg);
+      sendPrivateSystemMessage(socket, '❌ Your private message was blocked due to profanity.');
       return;
     }
 
