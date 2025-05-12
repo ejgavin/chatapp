@@ -324,9 +324,14 @@ socket.on('shutdown initiated', () => {
 });
 
 // 🔒 TEMP DISABLE FUNCTIONALITY
-// Check if temp disable is on when the page loads
+// Listen for temp disable event and disable chat UI
 socket.on('temp disable', () => {
   messages.innerHTML = '';
   input.disabled = true;
   sendButton.disabled = true;
+});
+
+// On page load, check if temp disable is active
+window.addEventListener('load', () => {
+  socket.emit('check temp disable');  // Trigger check for temp disable
 });
