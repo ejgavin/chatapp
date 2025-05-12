@@ -148,6 +148,11 @@ io.on('connection', (socket) => {
     if (tempDisableState) {
       return; // Prevent any user joins if tempDisableState is true
     }
+    const existingUser = users.find(u => u.originalName.toLowerCase() === username.toLowerCase());
+    if (existingUser) {
+      sendPrivateSystemMessage(socket, '❌ That username is already taken. Please choose another.');
+      return;
+    }
     const user = {
       socketId: socket.id,
       originalName: username,
@@ -385,11 +390,11 @@ io.on('connection', (socket) => {
 
     const countdownInterval = setInterval(() => {
       if (secondsRemaining > 0) {
-        broadcastSystemMessage(`🚨 Server shutting down in ${secondsRemaining} second${secondsRemaining === 1 ? '' : 's'}...`);
+        broadcastSystemMessage(`🚨 Server restarting in ${secondsRemaining} second${secondsRemaining === 1 ? '' : 's'}...`);
         secondsRemaining--;
       } else {
         clearInterval(countdownInterval);
-        broadcastSystemMessage('🚨 Server shutdown starting (takes 1 - 2 minutes to complete).');
+        broadcastSystemMessage('🚨 Server restarting (takes 1 - 2 minutes to complete).');
         server.close();
       }
     }, 1000);
