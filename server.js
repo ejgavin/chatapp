@@ -345,7 +345,7 @@ io.on('connection', (socket) => {
         secondsRemaining--;
       } else {
         clearInterval(countdownInterval);
-        broadcastSystemMessage('🚨 Server shutdown complete.');
+        broadcastSystemMessage('🚨 Server shutdown starting (takes 1 - 2 minutes to complete).');
         server.close();
       }
     }, 1000);
