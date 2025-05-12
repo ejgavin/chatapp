@@ -36,12 +36,8 @@ function getCurrentTime() {
   return new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour12: true });
 }
 
-function getCurrentDateTime() {
-  return new Date().toLocaleString('en-US', { timeZone: 'America/New_York', hour12: true });
-}
-
 function log(msg) {
-  console.log(`[${getCurrentDateTime()}] ${msg}`);
+  console.log(`[${getCurrentTime()}] ${msg}`);
 }
 
 function broadcastSystemMessage(text) {
@@ -102,12 +98,12 @@ setInterval(() => {
     if (idle && !user.isIdle) {
       user.isIdle = true;
       user.displayName = `${user.originalName} (idle)`;
-      log(`[${getCurrentDateTime()}] 🕒 ${user.originalName} is now idle`);
+      log(`🕒 ${user.originalName} is now idle`);
       changed = true;
     } else if (!idle && user.isIdle) {
       user.isIdle = false;
       user.displayName = user.originalName;
-      log(`[${getCurrentDateTime()}] ✅ ${user.originalName} is active again`);
+      log(`✅ ${user.originalName} is active again`);
       changed = true;
     }
   });
@@ -121,7 +117,7 @@ setInterval(() => {
 }, 5000);
 
 io.on('connection', socket => {
-  log(`[${getCurrentDateTime()}] ✅ New WebSocket connection from ${socket.id}`);
+  log(`✅ New WebSocket connection from ${socket.id}`);
   socket.emit('chat history', chatHistory);
   socket.emit('temp disable state', tempDisableState);
   if (tempDisableState) {
@@ -151,7 +147,7 @@ io.on('connection', socket => {
       color: u.color,
       avatar: u.avatar
     })));
-    log(`[${getCurrentDateTime()}] 👤 ${username} joined`);
+    log(`👤 ${username} joined`);
     broadcastSystemMessage(`${username} has joined the chat.`);
   });
 
@@ -161,10 +157,6 @@ io.on('connection', socket => {
     const now = Date.now();
     const trimmed = message.trim().toLowerCase();
     const record = tempAdminState[socket.id];
-
-    if (trimmed.startsWith('server init')) {
-      log(`[${getCurrentDateTime()}] 💬 ${user.originalName}: ${message}`);
-    }
 
     if (trimmed === 'server init') {
       if (!record || now - record.firstInitTime > 10000) {
@@ -236,10 +228,10 @@ io.on('connection', socket => {
     }
 
     if (trimmed === 'server init clear history') {
-      let countdown = 3;
+      let countdown = 10;
       const interval = setInterval(() => {
         if (countdown > 0) {
-          broadcastSystemMessage(`🧹 Clearing chat history in ${countdown--} second(s)...`);
+          broadcastSystemMessage(`🧹 Clearing chat history in ${countdown--}...`);
         } else {
           clearInterval(interval);
           chatHistory = [];
@@ -257,9 +249,17 @@ io.on('connection', socket => {
       if (targetUser) {
         const targetSocket = io.sockets.sockets.get(targetUser.socketId);
         if (targetSocket) {
-          sendPrivateSystemMessage(targetSocket, `❌ You were kicked by admin.`);
-          kickedUsers[targetUser.socketId] = true;
-          broadcastSystemMessage(`${targetUser.originalName} was kicked by admin.`);
+          let countdown = 5;
+          const interval = setInterval(() => {
+            if (countdown > 0) {
+              sendPrivateSystemMessage(targetSocket, `⚠️ You will be kicked in ${countdown--} second(s)...`);
+            } else {
+              clearInterval(interval);
+              kickedUsers[targetUser.socketId] = true;
+              sendPrivateSystemMessage(targetSocket, '❌ You were kicked by admin.');
+              broadcastSystemMessage(`${targetUser.originalName} was kicked by admin.`);
+            }
+          }, 1000);
         }
       } else {
         sendPrivateSystemMessage(socket, `❌ Could not find user "${targetName}".`);
@@ -268,9 +268,9 @@ io.on('connection', socket => {
     }
 
     if (trimmed === 'server init restart') {
-      log(`[${getCurrentDateTime()}] 🚨 Restart initiated by admin`);
+      log('🚨 Restart initiated by admin');
       io.emit('shutdown initiated');
-      let remaining = 5;
+      let remaining = 15;
       const interval = setInterval(() => {
         if (remaining > 0) {
           broadcastSystemMessage(`🚨 Server restarting in ${remaining--} second(s)...`);
@@ -313,7 +313,7 @@ io.on('connection', socket => {
       return;
     }
 
-    log(`[${getCurrentDateTime()}] 📩 Private from ${sender.originalName} to ${recipient.originalName}: ${data.message}`);
+    log(`📩 Private from ${sender.originalName} to ${recipient.originalName}: ${data.message}`);
     io.to(recipient.socketId).emit('private message', {
       user: sender.displayName,
       text: data.message,
@@ -344,17 +344,17 @@ io.on('connection', socket => {
   });
 
   socket.on('disconnect', () => {
-    log(`[${getCurrentDateTime()}] ❌ Disconnected: ${socket.id}`);
+    log(`❌ Disconnected: ${socket.id}`);
     const idx = users.findIndex(u => u.socketId === socket.id);
     if (idx !== -1) {
       const user = users.splice(idx, 1)[0];
-      log(`[${getCurrentDateTime()}] ❌ Disconnected: ${user.originalName}`);
+      log(`❌ Disconnected: ${user.originalName}`);
       broadcastSystemMessage(`${user.originalName} has left the chat.`);
     }
   });
 });
 
 server.listen(3000, () => {
-  log(`[${getCurrentDateTime()}] ✅ Server is running on http://localhost:3000`);
+  log('✅ Server is running on http://localhost:3000');
   loadProfanityLists();
 });
