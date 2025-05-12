@@ -339,8 +339,8 @@ socket.on('temp disable', () => {
   msg.classList.add('text-gray-500', 'text-sm', 'italic');
   msg.textContent = 'Admin Has Enabled Temp Chat Disable';
   messages.appendChild(msg);
-  input.disabled = true;
-  sendButton.disabled = true;
+  input.disabled = false;
+  sendButton.disabled = false;
 });
 
 // On page load, check if temp disable is active
