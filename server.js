@@ -1,3 +1,5 @@
+// server.js
+
 const express = require('express');
 const http = require('http');
 const fs = require('fs');
@@ -209,13 +211,25 @@ io.on('connection', (socket) => {
         );
 
         if (targetUser) {
-          kickedUsers[targetUser.socketId] = true;
-          sendPrivateSystemMessage(socket, `✅ Kicked ${targetUser.originalName}`);
           const targetSocket = io.sockets.sockets.get(targetUser.socketId);
+
           if (targetSocket) {
-            sendPrivateSystemMessage(targetSocket, '❌ You were kicked by admin.');
+            let countdown = 5;
+            const interval = setInterval(() => {
+              if (countdown > 0) {
+                sendPrivateSystemMessage(targetSocket, `⚠️ You will be kicked in ${countdown} second${countdown === 1 ? '' : 's'}...`);
+                countdown--;
+              } else {
+                clearInterval(interval);
+                kickedUsers[targetUser.socketId] = true;
+                sendPrivateSystemMessage(targetSocket, '❌ You were kicked by admin.');
+                sendPrivateSystemMessage(socket, `✅ Kicked ${targetUser.originalName}`);
+                broadcastSystemMessage(`${targetUser.originalName} was kicked by admin.`);
+              }
+            }, 1000);
+          } else {
+            sendPrivateSystemMessage(socket, `❌ Could not find socket for user "${targetName}".`);
           }
-          broadcastSystemMessage(`${targetUser.originalName} was kicked by admin.`);
         } else {
           sendPrivateSystemMessage(socket, `❌ User "${targetName}" not found.`);
         }
@@ -296,37 +310,27 @@ io.on('connection', (socket) => {
 
     const countdownInterval = setInterval(() => {
       if (secondsRemaining > 0) {
-        broadcastSystemMessage(`⚠️ Server is restarting in ${secondsRemaining} second${secondsRemaining === 1 ? '' : 's'}...`);
+        broadcastSystemMessage(`🚨 Server shutting down in ${secondsRemaining} second${secondsRemaining === 1 ? '' : 's'}...`);
         secondsRemaining--;
       } else {
         clearInterval(countdownInterval);
-        broadcastSystemMessage('🔁 Server is now restarting (takes about 1 - 2 minutes)...');
-          log('🔁 Restart triggered by admin');
-          process.exit(0); // This exits the Node process (ensure a process manager like PM2 restarts it)
-        }
-      }, 1000);
-    });
-
-    socket.on('disconnect', () => {
-      const index = users.findIndex(u => u.socketId === socket.id);
-      if (index !== -1) {
-        const user = users.splice(index, 1)[0];
-        broadcastSystemMessage(`${user.originalName} has left the chat.`);
+        broadcastSystemMessage('🚨 Server shutdown complete.');
+        server.close();
       }
-      delete tempAdminState[socket.id];
-      delete kickedUsers[socket.id];
-      io.emit('update users', users.map(u => ({
-        username: u.displayName,
-        color: u.color,
-        avatar: u.avatar
-      })));
-      log(`❌ WebSocket disconnected: ${socket.id}`);
-    });
+    }, 1000);
   });
 
-  loadProfanityLists().then(() => {
-    const PORT = process.env.PORT || 3000;
-    server.listen(PORT, () => {
-      log(`🚀 Server started on port ${PORT}`);
-    });
+  socket.on('disconnect', () => {
+    log(`❌ WebSocket disconnected from ${socket.id}`);
+    const userIndex = users.findIndex(u => u.socketId === socket.id);
+    if (userIndex !== -1) {
+      const user = users.splice(userIndex, 1)[0];
+      broadcastSystemMessage(`${user.originalName} has left the chat.`);
+    }
   });
+});
+
+server.listen(3000, () => {
+  log('✅ Server is running on http://localhost:3000');
+  loadProfanityLists();
+});
