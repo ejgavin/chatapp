@@ -63,50 +63,39 @@ function saveChatHistory() {
   });
 }
 
+// Load profanity lists
+let profanityList = new Set();
+
+async function loadProfanityLists() {
+  try {
+    const [cmuResponse, zacangerResponse] = await Promise.all([
+      axios.get('https://www.cs.cmu.edu/~biglou/resources/bad-words.txt'),
+      axios.get('https://raw.githubusercontent.com/zacanger/profane-words/master/words.json')
+    ]);
+
+    const cmuWords = cmuResponse.data.split('\n').map(word => word.trim().toLowerCase()).filter(Boolean);
+    const zacangerWords = zacangerResponse.data.map(word => word.trim().toLowerCase());
+
+    profanityList = new Set([...cmuWords, ...zacangerWords]);
+    log(`🛡️ Loaded ${profanityList.size} profane words.`);
+  } catch (error) {
+    log(`❌ Error loading profanity lists: ${error}`);
+  }
+}
+
+function containsProfanity(message) {
+  const words = message.toLowerCase().split(/\s+/);
+  return words.some(word => profanityList.has(word));
+}
+
 function sendPrivateSystemMessage(socket, text) {
-  const message = {
+  socket.emit('chat message', {
     user: 'Server',
     text,
     color: '#000000',
     avatar: 'S',
     time: getCurrentTime(),
-  };
-  socket.emit('private message', message);
-}
-
-// Load bad words from external sources
-let badWords = [];
-const profanityUrls = [
-  'https://www.cs.cmu.edu/~biglou/resources/bad-words.txt',
-  'https://raw.githubusercontent.com/zacanger/profane-words/3ebc6d0910d99df7d12fe1aa1749bf5f939d6a5b/words.json',
-];
-
-async function loadBadWords() {
-  try {
-    // Load bad words from each URL
-    for (let url of profanityUrls) {
-      const response = await axios.get(url);
-      if (url.endsWith('.txt')) {
-        badWords = badWords.concat(response.data.split('\n').map(word => word.trim().toLowerCase()));
-      } else if (url.endsWith('.json')) {
-        const wordsData = response.data;
-        if (Array.isArray(wordsData)) {
-          badWords = badWords.concat(wordsData.map(word => word.toLowerCase()));
-        }
-      }
-    }
-    log(`✅ Profanity list loaded, ${badWords.length} words.`);
-  } catch (error) {
-    log(`❌ Failed to load bad words: ${error.message}`);
-  }
-}
-
-// Call the function to load bad words
-loadBadWords();
-
-function containsProfanity(message) {
-  const lowerCaseMessage = message.toLowerCase();
-  return badWords.some((word) => lowerCaseMessage.includes(word));
+  });
 }
 
 // Idle status check every 5 seconds
@@ -169,6 +158,13 @@ io.on('connection', (socket) => {
     if (user) {
       user.lastActivity = Date.now();
     }
+
+    if (containsProfanity(message)) {
+      log(`🚫 Message blocked from ${user?.displayName || 'Anonymous'}: ${message}`);
+      sendPrivateSystemMessage(socket, '❌ Your message was blocked due to profanity.');
+      return;
+    }
+
     const msg = {
       user: user?.displayName || 'Anonymous',
       text: message,
@@ -177,14 +173,6 @@ io.on('connection', (socket) => {
       time: getCurrentTime(),
     };
     log(`💬 ${msg.user}: ${msg.text}`);
-
-    // Check for profanity
-    if (containsProfanity(msg.text)) {
-      log(`🚫 Message blocked due to profanity: ${msg.text}`);
-      sendPrivateSystemMessage(socket, '❌ Your message was blocked due to profanity.');
-      return; // Don't send the message to anyone
-    }
-
     io.emit('chat message', msg);
     chatHistory.push(msg);
     saveChatHistory();
@@ -202,12 +190,10 @@ io.on('connection', (socket) => {
     // Check if the private message contains profanity
     if (containsProfanity(data.message)) {
       log(`🚫 Private message blocked from ${sender.displayName} to ${recipient.displayName}: ${data.message}`);
-      // Send system message only to the sender, no message to recipient or sender about blocked message
       sendPrivateSystemMessage(socket, '❌ Your private message was blocked due to profanity.');
-      return; // Don't send the message to anyone
+      return;
     }
 
-    // Only send private message if no profanity
     log(`📩 Private from ${sender.displayName} to ${recipient.displayName}: ${data.message}`);
     io.to(recipient.socketId).emit('private message', {
       user: sender.displayName,
@@ -285,4 +271,5 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   log(`🚀 Server running at http://localhost:${PORT}`);
+  loadProfanityLists();
 });
