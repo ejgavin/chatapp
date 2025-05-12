@@ -322,3 +322,10 @@ socket.on('shutdown initiated', () => {
   input.disabled = true;
   sendButton.disabled = true;
 });
+
+// 🔒 TEMP DISABLE FUNCTIONALITY
+socket.on('temp disable', () => {
+  messages.innerHTML = '';
+  input.disabled = true;
+  sendButton.disabled = true;
+});
