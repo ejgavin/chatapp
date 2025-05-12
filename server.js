@@ -234,8 +234,11 @@ io.on('connection', (socket) => {
           } else {
             clearInterval(interval);
             chatHistory = [];
-            saveChatHistory();
-            broadcastSystemMessage('🧹 Chat history has been cleared.');
+            setTimeout(() => {
+              saveChatHistory();
+              broadcastSystemMessage('🧹 Chat history has been cleared.');
+              io.emit('clear history');
+            }, 1500);
           }
         }, 1000);
 

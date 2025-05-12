@@ -370,3 +370,8 @@ socket.on('you were kicked', () => {
   msg.textContent = 'You were kicked by an admin and can no longer send messages.';
   messages.appendChild(msg);
 });
+
+// 🔄 CLEAR HISTORY FUNCTIONALITY
+socket.on('clear history', () => {
+  messages.innerHTML = '';
+});
