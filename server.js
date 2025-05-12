@@ -302,6 +302,7 @@ io.on('connection', socket => {
       time: getCurrentTime(),
     };
 
+    log(`💬 Public: ${user.originalName}: ${message}`);
     io.emit('chat message', msg);
     chatHistory.push(msg);
     saveChatHistory();
@@ -316,10 +317,11 @@ io.on('connection', socket => {
 
     if (containsProfanity(data.message)) {
       sendPrivateSystemMessage(socket, '❌ Your private message was blocked due to profanity.');
+      log(`🚫 Blocked private (profanity): ${sender.originalName} ➡ ${data.recipient}: ${data.message}`);
       return;
     }
 
-    log(`📩 Private from ${sender.originalName} to ${recipient.originalName}: ${data.message}`);
+    log(`📩 Private: ${sender.originalName} ➡ ${recipient.originalName}: ${data.message}`);
     io.to(recipient.socketId).emit('private message', {
       user: sender.displayName,
       text: data.message,
