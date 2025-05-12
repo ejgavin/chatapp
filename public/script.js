@@ -276,56 +276,31 @@ function startIdleDetection() {
 }
 
 function resetIdleTimer() {
-  if (userStatus !== 'active') {
-    userStatus = 'active';
-    socket.emit('update status', { status: 'active' });
-  }
-
   clearTimeout(idleTimeout);
   idleTimeout = setTimeout(() => {
     userStatus = 'idle';
-    socket.emit('update status', { status: 'idle' });
+    socket.emit('user status', { username, status: userStatus });
   }, idleLimit);
-
   lastInteractionTime = Date.now();
 }
 
+// STATUS LOGGING
 function startStatusLogging() {
   setInterval(() => {
-    const idleDuration = Math.round((Date.now() - lastInteractionTime) / 1000);
-    console.log(`User ${username} status: ${userStatus} (Last interaction: ${idleDuration} seconds ago)`);
+    const timeElapsed = Date.now() - lastInteractionTime;
+    if (timeElapsed > idleLimit) {
+      userStatus = 'idle';
+    } else {
+      userStatus = 'active';
+    }
+    socket.emit('user status', { username, status: userStatus });
   }, statusLogInterval);
 }
 
-socket.on('update status', ({ username, status }) => {
-  const userElement = document.querySelector(`[data-username="${username}"]`);
-  if (userElement) {
-    const statusText = status === 'idle' ? '(Idle)' : '';
-    userElement.innerHTML = `${username} ${statusText}`;
+socket.on('temp disable', (status) => {
+  if (status) {
+    messages.innerHTML = '';
+    input.disabled = true;
+    sendButton.disabled = true;
   }
-});
-
-// 🔒 SHUTDOWN FUNCTIONALITY
-document.getElementById('shutdown-btn').addEventListener('click', () => {
-  const password = document.getElementById('shutdown-password').value;
-  const errorMsg = document.getElementById('shutdown-error');
-  if (password === 'eliadmin123') {
-    socket.emit('admin shutdown');
-    errorMsg.classList.add('hidden');
-  } else {
-    errorMsg.classList.remove('hidden');
-  }
-});
-
-socket.on('shutdown initiated', () => {
-  messages.innerHTML = '';
-  input.disabled = true;
-  sendButton.disabled = true;
-});
-
-// 🔒 TEMP DISABLE FUNCTIONALITY
-socket.on('temp disable', () => {
-  messages.innerHTML = '';
-  input.disabled = true;
-  sendButton.disabled = true;
 });
