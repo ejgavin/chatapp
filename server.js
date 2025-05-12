@@ -1,6 +1,7 @@
 const express = require('express');
 const http = require('http');
 const fs = require('fs');
+const https = require('https');
 const { Server } = require('socket.io');
 const path = require('path');
 
@@ -11,7 +12,6 @@ const io = new Server(server);
 const CHAT_HISTORY_FILE = path.join(__dirname, 'chat-history.json');
 let chatHistory = [];
 
-// Load chat history
 if (fs.existsSync(CHAT_HISTORY_FILE)) {
   try {
     chatHistory = JSON.parse(fs.readFileSync(CHAT_HISTORY_FILE, 'utf8'));
@@ -23,7 +23,7 @@ if (fs.existsSync(CHAT_HISTORY_FILE)) {
 app.use(express.static('public'));
 
 const users = [];
-const IDLE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+const IDLE_TIMEOUT = 5 * 60 * 1000;
 
 function getCurrentTime() {
   return new Date().toLocaleTimeString('en-US', {
@@ -62,6 +62,26 @@ function saveChatHistory() {
   });
 }
 
+// Load bad words from remote URL
+const BAD_WORDS_URL = 'https://www.cs.cmu.edu/~biglou/resources/bad-words.txt';
+let badWords = new Set();
+
+function fetchBadWords() {
+  https.get(BAD_WORDS_URL, (res) => {
+    let data = '';
+    res.on('data', chunk => data += chunk);
+    res.on('end', () => {
+      badWords = new Set(
+        data.split('\n').map(w => w.trim().toLowerCase()).filter(Boolean)
+      );
+      log(`🛡️ Loaded ${badWords.size} bad words from remote`);
+    });
+  }).on('error', err => {
+    log(`❌ Failed to fetch bad words list: ${err.message}`);
+  });
+}
+fetchBadWords();
+
 // Idle status check every 5 seconds
 setInterval(() => {
   const now = Date.now();
@@ -91,7 +111,7 @@ setInterval(() => {
       avatar: u.avatar
     })));
   }
-}, 5 * 1000); // every 5 seconds
+}, 5000);
 
 io.on('connection', (socket) => {
   log(`✅ New WebSocket connection from ${socket.id}`);
@@ -122,6 +142,18 @@ io.on('connection', (socket) => {
     if (user) {
       user.lastActivity = Date.now();
     }
+
+    const lowerMessage = message.toLowerCase();
+    const containsBadWord = [...badWords].some(word =>
+      lowerMessage.includes(word)
+    );
+
+    if (containsBadWord) {
+      log(`🚫 Blocked message from ${user?.displayName || 'Unknown'} due to bad language`);
+      socket.emit('warning', '🚫 Your message contained inappropriate language and was not sent.');
+      return;
+    }
+
     const msg = {
       user: user?.displayName || 'Anonymous',
       text: message,
@@ -129,6 +161,7 @@ io.on('connection', (socket) => {
       avatar: user?.avatar || 'A',
       time: getCurrentTime(),
     };
+
     log(`💬 ${msg.user}: ${msg.text}`);
     io.emit('chat message', msg);
     chatHistory.push(msg);
@@ -189,12 +222,11 @@ io.on('connection', (socket) => {
         clearInterval(countdownInterval);
         broadcastSystemMessage('🔁 Server is now restarting (takes about 1 - 2 minutes)...');
 
-        // Allow the message to broadcast before shutdown
         setTimeout(() => {
-          saveChatHistory(); // Final save
+          saveChatHistory();
           server.close(() => {
             log('🛑 Server has shut down.');
-            process.exit(0); // End the process
+            process.exit(0);
           });
         }, 1000);
       }
