@@ -18,18 +18,21 @@ if (fs.existsSync(CHAT_HISTORY_FILE)) {
   try {
     chatHistory = JSON.parse(fs.readFileSync(CHAT_HISTORY_FILE, 'utf8'));
   } catch (err) {
-    log(`❌ Error reading chat history: ${err}`);
+    console.log(`❌ Error reading chat history: ${err}`);
   }
 }
 
 app.use(express.static('public'));
 
 const users = [];
-const IDLE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+const IDLE_TIMEOUT = 5 * 60 * 1000;
 
-const tempAdminState = {}; // Map of socket.id → { firstInitTime, tempAdminGranted }
-const kickedUsers = {}; // socketId → true if kicked
-let tempDisableState = false; // Track temp disable state
+const tempAdminState = {};
+const kickedUsers = {};
+let tempDisableState = false;
+
+const lastMessageTimestamps = {}; // socket.id → timestamp of last message
+const SLOW_MODE_INTERVAL = 3000; // 3 seconds
 
 function getCurrentTime() {
   return new Date().toLocaleTimeString('en-US', {
@@ -74,7 +77,7 @@ function sendPrivateSystemMessage(socket, text) {
 
 function saveChatHistory() {
   fs.writeFile(CHAT_HISTORY_FILE, JSON.stringify(chatHistory, null, 2), (err) => {
-    if (err) log(`❌ Error saving chat history: ${err}`);
+    if (err) console.log(`❌ Error saving chat history: ${err}`);
   });
 }
 
@@ -135,19 +138,21 @@ setInterval(() => {
 io.on('connection', (socket) => {
   log(`✅ New WebSocket connection from ${socket.id}`);
   socket.emit('chat history', chatHistory);
-
-  // Send current tempDisableState to the client
   socket.emit('temp disable state', tempDisableState);
-
   if (tempDisableState) {
     socket.emit('temp disable');
     return;
   }
 
   socket.on('new user', (username, color, avatar) => {
-    if (tempDisableState) {
-      return; // Prevent any user joins if tempDisableState is true
+    if (tempDisableState) return;
+
+    const nameTaken = users.some(u => u.originalName.toLowerCase() === username.toLowerCase());
+    if (nameTaken) {
+      sendPrivateSystemMessage(socket, '❌ Username already taken.');
+      return;
     }
+
     const user = {
       socketId: socket.id,
       originalName: username,
@@ -181,122 +186,15 @@ io.on('connection', (socket) => {
       return;
     }
 
-    user.lastActivity = Date.now();
-    log(`💬 ${user.originalName}: ${message}`);
-
-    const trimmedMessage = message.trim().toLowerCase();
-
-    // Handle `server init` logic
-    if (trimmedMessage === 'server init') {
-      const now = Date.now();
-      const record = tempAdminState[socket.id];
-
-      if (!record || (now - record.firstInitTime > 10000)) {
-        tempAdminState[socket.id] = { firstInitTime: now, tempAdminGranted: false };
-        sendPrivateSystemMessage(socket, 'Ok');
-        return;
-      }
-
-      if (!record.tempAdminGranted) {
-        record.tempAdminGranted = true;
-        sendPrivateSystemMessage(socket, 'Temp Admin Granted');
-        return;
-      }
-    }
-
-    // Handle `server init help` logic
-    if (trimmedMessage === 'server init help') {
-      const record = tempAdminState[socket.id];
-      if (record && record.tempAdminGranted) {
-        sendPrivateSystemMessage(socket, '🛠️ Admin Commands:\n1. server init temp disable\n2. server init clear history\n3. server init kick <username>');
-        return;
-      }
-    }
-
-    // Handle `server init temp disable` logic
-    if (trimmedMessage === 'server init temp disable') {
-      const record = tempAdminState[socket.id];
-      if (record && record.tempAdminGranted) {
-        log(`⚙️ Temp disable triggered by admin`);
-
-        setTimeout(() => {
-          tempDisableState = true;
-          io.emit('temp disable');
-          broadcastSystemMessage('Admin Has Enabled Temp Disable');
-        }, 2000);
-
-        return;
-      }
-    }
-
-    // Handle `server init clear history` logic
-    if (trimmedMessage === 'server init clear history') {
-      const record = tempAdminState[socket.id];
-      if (record && record.tempAdminGranted) {
-        log(`⚙️ Clear chat history triggered by admin`);
-
-        let countdown = 10;
-        const interval = setInterval(() => {
-          if (countdown > 0) {
-            broadcastSystemMessage(`🧹 Clearing chat history in ${countdown} second${countdown === 1 ? '' : 's'}...`);
-            countdown--;
-          } else {
-            clearInterval(interval);
-            chatHistory = [];
-            setTimeout(() => {
-              saveChatHistory();
-              broadcastSystemMessage('🧹 Chat history has been cleared.');
-              io.emit('clear history');
-            }, 1500);
-          }
-        }, 1000);
-
-        return;
-      } else {
-        sendPrivateSystemMessage(socket, '❌ You are not authorized to clear history.');
-        return;
-      }
-    }
-
-    // Handle `server init kick <username>` logic
-    if (trimmedMessage.startsWith('server init kick ')) {
-      const record = tempAdminState[socket.id];
-      if (record && record.tempAdminGranted) {
-        const targetName = trimmedMessage.slice('server init kick '.length).trim();
-        const targetUser = users.find(u =>
-          u.originalName.toLowerCase() === targetName.toLowerCase() ||
-          u.displayName.toLowerCase() === targetName.toLowerCase()
-        );
-
-        if (targetUser) {
-          const targetSocket = io.sockets.sockets.get(targetUser.socketId);
-
-          if (targetSocket) {
-            let countdown = 5;
-            const interval = setInterval(() => {
-              if (countdown > 0) {
-                sendPrivateSystemMessage(targetSocket, `⚠️ You will be kicked in ${countdown} second${countdown === 1 ? '' : 's'}...`);
-                countdown--;
-              } else {
-                clearInterval(interval);
-                kickedUsers[targetUser.socketId] = true;
-                sendPrivateSystemMessage(targetSocket, '❌ You were kicked by admin.');
-                sendPrivateSystemMessage(socket, `✅ Kicked ${targetUser.originalName}`);
-                log(`🚫 Kicked ${targetUser.originalName} by ${user.originalName}`);
-                broadcastSystemMessage(`${targetUser.originalName} was kicked by admin.`);
-              }
-            }, 1000);
-          } else {
-            sendPrivateSystemMessage(socket, `❌ Could not find socket for user "${targetName}".`);
-          }
-        } else {
-          sendPrivateSystemMessage(socket, `❌ User "${targetName}" not found.`);
-        }
-      } else {
-        sendPrivateSystemMessage(socket, '❌ You are not authorized to kick.');
-      }
+    const now = Date.now();
+    if (lastMessageTimestamps[socket.id] && now - lastMessageTimestamps[socket.id] < SLOW_MODE_INTERVAL) {
+      sendPrivateSystemMessage(socket, '⏳ Slow mode is enabled. Please wait before sending another message.');
       return;
     }
+    lastMessageTimestamps[socket.id] = now;
+
+    user.lastActivity = now;
+    log(`💬 ${user.originalName}: ${message}`);
 
     if (containsProfanity(message)) {
       log(`🚫 Message blocked from ${user.originalName}: ${message}`);
@@ -305,10 +203,10 @@ io.on('connection', (socket) => {
     }
 
     const msg = {
-      user: user?.displayName || 'Anonymous',
+      user: user.displayName,
       text: message,
-      color: user?.color || '#000000',
-      avatar: user?.avatar || 'A',
+      color: user.color,
+      avatar: user.avatar,
       time: getCurrentTime(),
     };
 
@@ -325,18 +223,14 @@ io.on('connection', (socket) => {
 
     const sender = users.find(u => u.socketId === socket.id);
     const recipient = users.find(u => u.originalName === data.recipient || u.displayName === data.recipient);
-
-    if (!sender || !recipient) {
-      socket.emit('error', `User ${data.recipient} not found`);
-      return;
-    }
+    if (!sender || !recipient) return;
 
     if (containsProfanity(data.message)) {
       sendPrivateSystemMessage(socket, '❌ Your private message was blocked due to profanity.');
       return;
     }
 
-    log(`📩 Private from ${sender?.originalName} to ${recipient?.originalName}: ${data.message}`);
+    log(`📩 Private from ${sender.originalName} to ${recipient.originalName}: ${data.message}`);
 
     io.to(recipient.socketId).emit('private message', {
       user: sender.displayName,
@@ -354,45 +248,6 @@ io.on('connection', (socket) => {
         isTyping,
       });
     }
-  });
-
-  socket.on('temp disable', () => {
-    tempDisableState = true; // Set temp disable state to true
-    io.emit('temp disable'); // Notify all clients that chat is disabled
-    broadcastSystemMessage('Admin Has Enabled Temp Chat Disable');
-  });
-
-  socket.on('username changed', (newUsername) => {
-    const user = users.find(u => u.socketId === socket.id);
-    if (user) {
-      const oldUsername = user.originalName;
-      user.originalName = newUsername;
-      user.displayName = newUsername + (user.isIdle ? ' (idle)' : '');
-      io.emit('update users', users.map(u => ({
-        username: u.displayName,
-        color: u.color,
-        avatar: u.avatar
-      })));
-      broadcastSystemMessage(`${oldUsername} changed username to ${newUsername}.`);
-    }
-  });
-
-  socket.on('admin shutdown', () => {
-    log('🚨 Admin has initiated shutdown.');
-    io.emit('shutdown initiated');
-
-    let secondsRemaining = 15;
-
-    const countdownInterval = setInterval(() => {
-      if (secondsRemaining > 0) {
-        broadcastSystemMessage(`🚨 Server restarting in ${secondsRemaining} second${secondsRemaining === 1 ? '' : 's'}...`);
-        secondsRemaining--;
-      } else {
-        clearInterval(countdownInterval);
-        broadcastSystemMessage('🚨 Server restarting (takes 1 - 2 minutes to complete).');
-        server.close();
-      }
-    }, 1000);
   });
 
   socket.on('disconnect', () => {
