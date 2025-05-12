@@ -42,6 +42,12 @@ function getCurrentDateTime() {
   return new Date().toLocaleString('en-US', {
     timeZone: 'America/New_York',
     hour12: true,
+    month: 'numeric',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric'
   });
 }
 
@@ -84,7 +90,7 @@ async function loadProfanityLists() {
   try {
     const [cmu, zac] = await Promise.all([
       axios.get('https://www.cs.cmu.edu/~biglou/resources/bad-words.txt'),
-      axios.get('https://raw.githubusercontent.com/zacanger/profane-words/master/words.json'),
+      axios.get('https://raw.githubusercontent.com/zacanger/profane-words/master/words.json')
     ]);
     const cmuWords = cmu.data.split('\n').map(w => w.trim().toLowerCase()).filter(Boolean);
     const zacWords = zac.data.map(w => w.trim().toLowerCase());
@@ -162,99 +168,96 @@ io.on('connection', socket => {
     socket.on('chat message', message => {
       const user = users.find(u => u.socketId === socket.id);
       if (!user) return;
-
       const now = Date.now();
       const trimmed = message.trim().toLowerCase();
       const record = tempAdminState[socket.id];
-
-      if (containsProfanity(message)) {
-        log(`🚫 Message blocked from ${user.originalName}: ${message}`);
-        sendPrivateSystemMessage(socket, '❌ Your message was blocked due to profanity.');
-        return;
-      }
-
-      if (tempDisableState && !trimmed.startsWith('server init')) {
-        log(`🚫 Message blocked from ${user.originalName} due to temp disable: ${message}`);
-        sendPrivateSystemMessage(socket, '❌ Admin has enabled temp chat disable. You cannot send messages.');
-        return;
-      }
-
-      if (kickedUsers[socket.id]) {
-        log(`🚫 Message blocked from ${user.originalName} (kicked): ${message}`);
-        sendPrivateSystemMessage(socket, '❌ You have been kicked and cannot send messages.');
-        return;
-      }
-
-      if (slowModeEnabled && lastMessageTimestamps[socket.id] && now - lastMessageTimestamps[socket.id] < SLOW_MODE_INTERVAL) {
-        log(`🐢 Slow mode: ${user.originalName}`);
-        sendPrivateSystemMessage(socket, '⏳ Slow mode is enabled. Please wait.');
-        return;
-      }
-
-      lastMessageTimestamps[socket.id] = now;
-      user.lastActivity = now;
 
       if (trimmed === 'server init') {
         if (!record || now - record.firstInitTime > 10000) {
           tempAdminState[socket.id] = { firstInitTime: now, tempAdminGranted: false };
           sendPrivateSystemMessage(socket, 'Ok');
+          log(`💬 ${user.originalName}: ${message}`);
           return;
         }
         if (!record.tempAdminGranted) {
           record.tempAdminGranted = true;
           sendPrivateSystemMessage(socket, 'Temp Admin Granted');
+          log(`💬 ${user.originalName}: ${message}`);
           return;
         }
       }
 
       if (trimmed.startsWith('server init') && (!record || !record.tempAdminGranted)) {
         sendPrivateSystemMessage(socket, '❌ You are not authorized to use admin commands.');
+        log(`🚫 ${user.originalName}: ${message}`);
         return;
       }
 
+      if (tempDisableState && !trimmed.startsWith('server init')) {
+        sendPrivateSystemMessage(socket, '❌ Admin has enabled temp chat disable. You cannot send messages.');
+        log(`🚫 Message blocked from ${user.originalName}: ${message}`);
+        return;
+      }
+
+      if (kickedUsers[socket.id]) {
+        sendPrivateSystemMessage(socket, '❌ You have been kicked and cannot send messages.');
+        log(`🚫 Message blocked from ${user.originalName}: ${message}`);
+        return;
+      }
+
+      if (slowModeEnabled && lastMessageTimestamps[socket.id] && now - lastMessageTimestamps[socket.id] < SLOW_MODE_INTERVAL) {
+        sendPrivateSystemMessage(socket, '⏳ Slow mode is enabled. Please wait.');
+        log(`🚫 Message blocked from ${user.originalName}: ${message}`);
+        return;
+      }
+      lastMessageTimestamps[socket.id] = now;
+      user.lastActivity = now;
+
+      // Admin Command Handlers
       if (trimmed === 'server init help') {
         sendPrivateSystemMessage(socket, '🛠️ Admin Commands:\n1. server init temp disable\n2. server init temp disable off\n3. server init clear history\n4. server init kick <username>\n5. server init slowmode on/off\n6. server init restart');
+        log(`💬 ${user.originalName}: ${message}`);
         return;
       }
 
       if (trimmed === 'server init slowmode on') {
         slowModeEnabled = true;
-        log('⚙️ Slow mode enabled');
         broadcastSystemMessage('⚙️ Admin has enabled slow mode.');
+        log(`⚙️ Slow mode enabled by ${user.originalName}`);
         return;
       }
 
       if (trimmed === 'server init slowmode off') {
         slowModeEnabled = false;
-        log('⚙️ Slow mode disabled');
         broadcastSystemMessage('⚙️ Admin has disabled slow mode.');
+        log(`⚙️ Slow mode disabled by ${user.originalName}`);
         return;
       }
 
       if (trimmed === 'server init temp disable') {
-        log('⚙️ Temp disable ON triggered by admin');
         setTimeout(() => {
           tempDisableState = true;
           io.emit('temp disable');
           broadcastSystemMessage('⚠️ Admin has enabled temp chat disable.');
+          log(`⚙️ Temp disable ON triggered by admin: ${user.originalName}`);
         }, 2000);
         return;
       }
 
       if (trimmed === 'server init temp disable off') {
-        log('🔓 Temp disable OFF triggered by admin');
         tempDisableState = false;
         io.emit('temp disable off');
         broadcastSystemMessage('✅ Admin has disabled temp chat disable.');
+        log(`🔓 Temp disable OFF triggered by admin: ${user.originalName}`);
         return;
       }
 
       if (trimmed === 'server init clear history') {
-        log('⚙️ Clear chat history triggered by admin');
         let countdown = 10;
         const interval = setInterval(() => {
           if (countdown > 0) {
             broadcastSystemMessage(`🧹 Clearing chat history in ${countdown--}...`);
+            log(`⚙️ Clear chat history triggered by admin: ${user.originalName}`);
           } else {
             clearInterval(interval);
             chatHistory = [];
@@ -280,8 +283,8 @@ io.on('connection', socket => {
                 clearInterval(interval);
                 kickedUsers[targetUser.socketId] = true;
                 sendPrivateSystemMessage(targetSocket, '❌ You were kicked by admin.');
-                log(`🚫 Kicked ${targetUser.originalName} by ${user.originalName}`);
                 broadcastSystemMessage(`${targetUser.originalName} was kicked by admin.`);
+                log(`🚫 Kicked ${targetUser.originalName} by ${user.originalName}`);
               }
             }, 1000);
           }
@@ -307,6 +310,12 @@ io.on('connection', socket => {
         return;
       }
 
+      if (containsProfanity(message)) {
+        sendPrivateSystemMessage(socket, '❌ Your message was blocked due to profanity.');
+        log(`🚫 Message blocked from ${user.originalName}: ${message}`);
+        return;
+      }
+
       const msg = {
         user: user.displayName,
         text: message,
@@ -315,10 +324,10 @@ io.on('connection', socket => {
         time: getCurrentTime(),
       };
 
-      log(`💬 ${user.originalName}: ${message}`);
       io.emit('chat message', msg);
       chatHistory.push(msg);
       saveChatHistory();
+      log(`💬 ${user.originalName}: ${message}`);
     });
 
     socket.on('private message', data => {
@@ -329,8 +338,8 @@ io.on('connection', socket => {
       if (!sender || !recipient) return;
 
       if (containsProfanity(data.message)) {
-        log(`🚫 Message blocked from ${sender.originalName} (private to ${data.recipient}): ${data.message}`);
         sendPrivateSystemMessage(socket, '❌ Your private message was blocked due to profanity.');
+        log(`🚫 Blocked private (profanity): ${sender.originalName} ➡ ${data.recipient}: ${data.message}`);
         return;
       }
 
@@ -360,8 +369,8 @@ io.on('connection', socket => {
           color: u.color,
           avatar: u.avatar
         })));
-        log(`🔁 ${old} changed username to ${newUsername}`);
         broadcastSystemMessage(`${old} changed username to ${newUsername}.`);
+        log(`💬 ${user.originalName}: changed username to ${newUsername}`);
       }
     });
 
