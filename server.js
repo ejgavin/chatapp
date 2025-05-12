@@ -190,8 +190,9 @@ io.on('connection', (socket) => {
     // Check if the private message contains profanity
     if (containsProfanity(data.message)) {
       log(`🚫 Private message blocked from ${sender.displayName} to ${recipient.displayName}: ${data.message}`);
-      sendPrivateSystemMessage(socket, '❌ Your private message was blocked due to profanity.');
-      return;
+      // Send the profanity warning message to the sender
+      sendPrivateSystemMessage(socket, '❌ Your private message was blocked due to profanity and did not send.');
+      return; // Do not send the message to the recipient
     }
 
     log(`📩 Private from ${sender.displayName} to ${recipient.displayName}: ${data.message}`);
