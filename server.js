@@ -12,7 +12,6 @@ const io = new Server(server);
 const CHAT_HISTORY_FILE = path.join(__dirname, 'chat-history.json');
 let chatHistory = [];
 
-// Load chat history
 if (fs.existsSync(CHAT_HISTORY_FILE)) {
   try {
     chatHistory = JSON.parse(fs.readFileSync(CHAT_HISTORY_FILE, 'utf8'));
@@ -25,6 +24,8 @@ app.use(express.static('public'));
 
 const users = [];
 const IDLE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+
+const tempAdminState = {}; // Map of socket.id → { firstInitTime, tempAdminGranted }
 
 function getCurrentTime() {
   return new Date().toLocaleTimeString('en-US', {
@@ -57,13 +58,22 @@ function broadcastSystemMessage(text) {
   saveChatHistory();
 }
 
+function sendPrivateSystemMessage(socket, text) {
+  socket.emit('chat message', {
+    user: 'Server',
+    text,
+    color: '#000000',
+    avatar: 'S',
+    time: getCurrentTime(),
+  });
+}
+
 function saveChatHistory() {
   fs.writeFile(CHAT_HISTORY_FILE, JSON.stringify(chatHistory, null, 2), (err) => {
     if (err) log(`❌ Error saving chat history: ${err}`);
   });
 }
 
-// Load profanity lists
 let profanityList = new Set();
 
 async function loadProfanityLists() {
@@ -88,17 +98,6 @@ function containsProfanity(message) {
   return words.some(word => profanityList.has(word));
 }
 
-function sendPrivateSystemMessage(socket, text) {
-  socket.emit('chat message', {
-    user: 'Server',
-    text,
-    color: '#000000',
-    avatar: 'S',
-    time: getCurrentTime(),
-  });
-}
-
-// Idle status check every 5 seconds
 setInterval(() => {
   const now = Date.now();
   let userListChanged = false;
@@ -127,10 +126,7 @@ setInterval(() => {
       avatar: u.avatar
     })));
   }
-}, 5 * 1000); // every 5 seconds
-
-// Temp Admin Control Variables
-let tempAdminRequestTime = null;
+}, 5000);
 
 io.on('connection', (socket) => {
   log(`✅ New WebSocket connection from ${socket.id}`);
@@ -147,7 +143,6 @@ io.on('connection', (socket) => {
       isIdle: false,
     };
     users.push(user);
-    log(`👤 ${username} joined`);
     io.emit('update users', users.map(u => ({
       username: u.displayName,
       color: u.color,
@@ -158,24 +153,44 @@ io.on('connection', (socket) => {
 
   socket.on('chat message', (message) => {
     const user = users.find(u => u.socketId === socket.id);
-    if (user) {
-      user.lastActivity = Date.now();
+    if (user) user.lastActivity = Date.now();
+
+    const trimmedMessage = message.trim().toLowerCase();
+
+    // Handle `server init` logic
+    if (trimmedMessage === 'server init') {
+      const now = Date.now();
+      const record = tempAdminState[socket.id];
+
+      if (!record || (now - record.firstInitTime > 10000)) {
+        tempAdminState[socket.id] = { firstInitTime: now, tempAdminGranted: false };
+        sendPrivateSystemMessage(socket, 'Ok');
+        return;
+      }
+
+      if (!record.tempAdminGranted) {
+        record.tempAdminGranted = true;
+        sendPrivateSystemMessage(socket, 'Temp Admin Granted');
+        return;
+      }
     }
 
-    // Check for "server init" message
-    if (message.trim().toLowerCase() === 'server init') {
-      if (!tempAdminRequestTime || Date.now() - tempAdminRequestTime > 10000) {
-        tempAdminRequestTime = Date.now();
-        sendPrivateSystemMessage(socket, 'Ok');
-      } else {
-        sendPrivateSystemMessage(socket, 'Temp Admin Granted');
-        tempAdminRequestTime = null; // Reset the timer after granting temp admin
+    // Handle `server init temp disable` logic
+    if (trimmedMessage === 'server init temp disable') {
+      const record = tempAdminState[socket.id];
+      if (record && record.tempAdminGranted) {
+        log('⚙️ Temp disable triggered by admin');
+
+        setTimeout(() => {
+          socket.broadcast.emit('temp disable');
+          broadcastSystemMessage('Admin Has Enabled Temp Disable');
+        }, 2000);
+
+        return;
       }
-      return;
     }
 
     if (containsProfanity(message)) {
-      log(`🚫 Message blocked from ${user?.displayName || 'Anonymous'}: ${message}`);
       sendPrivateSystemMessage(socket, '❌ Your message was blocked due to profanity.');
       return;
     }
@@ -187,7 +202,7 @@ io.on('connection', (socket) => {
       avatar: user?.avatar || 'A',
       time: getCurrentTime(),
     };
-    log(`💬 ${msg.user}: ${msg.text}`);
+
     io.emit('chat message', msg);
     chatHistory.push(msg);
     saveChatHistory();
@@ -202,15 +217,11 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // Check if the private message contains profanity
     if (containsProfanity(data.message)) {
-      log(`🚫 Private message blocked from ${sender.displayName} to ${recipient.displayName}: ${data.message}`);
-      // Send the profanity warning message to the sender
-      sendPrivateSystemMessage(socket, '❌ Your private message was blocked due to profanity and did not send.');
-      return; // Do not send the message to the recipient
+      sendPrivateSystemMessage(socket, '❌ Your private message was blocked due to profanity.');
+      return;
     }
 
-    log(`📩 Private from ${sender.displayName} to ${recipient.displayName}: ${data.message}`);
     io.to(recipient.socketId).emit('private message', {
       user: sender.displayName,
       text: data.message,
@@ -233,7 +244,6 @@ io.on('connection', (socket) => {
       const oldUsername = user.originalName;
       user.originalName = newUsername;
       user.displayName = newUsername + (user.isIdle ? ' (idle)' : '');
-      log(`🔁 Username changed: ${oldUsername} → ${newUsername}`);
       io.emit('update users', users.map(u => ({
         username: u.displayName,
         color: u.color,
@@ -257,12 +267,11 @@ io.on('connection', (socket) => {
         clearInterval(countdownInterval);
         broadcastSystemMessage('🔁 Server is now restarting (takes about 1 - 2 minutes)...');
 
-        // Allow the message to broadcast before shutdown
         setTimeout(() => {
-          saveChatHistory(); // Final save
+          saveChatHistory();
           server.close(() => {
             log('🛑 Server has shut down.');
-            process.exit(0); // End the process
+            process.exit(0);
           });
         }, 1000);
       }
@@ -273,7 +282,6 @@ io.on('connection', (socket) => {
     const index = users.findIndex(u => u.socketId === socket.id);
     if (index !== -1) {
       const [user] = users.splice(index, 1);
-      log(`❌ Disconnected: ${user.originalName}`);
       io.emit('update users', users.map(u => ({
         username: u.displayName,
         color: u.color,
@@ -281,14 +289,7 @@ io.on('connection', (socket) => {
       })));
       broadcastSystemMessage(`${user.originalName} has left the chat.`);
     }
-  });
-
-  socket.on('server init temp disable', () => {
-    log('🔒 Temp Server Disable Enabled.');
-    io.emit('temp disable', { message: 'Admin has Enabled Temp Server Disable' });
-    setTimeout(() => {
-      broadcastSystemMessage('Temp Server Disable has been Enabled.');
-    }, 1000);
+    delete tempAdminState[socket.id];
   });
 });
 
