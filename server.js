@@ -159,7 +159,7 @@ io.on('connection', socket => {
 
   socket.on('chat message', message => {
     if (tempDisableState) {
-      sendPrivateSystemMessage(socket, '❌ Admin has enabled temp chat disable. You cannot send messages.');
+      sendPrivateSystemMessage(socket, '❌ Chat is temporarily disabled.');
       return;
     }
 
@@ -182,7 +182,6 @@ io.on('connection', socket => {
     const trimmed = message.trim().toLowerCase();
     const record = tempAdminState[socket.id];
 
-    // Admin Commands
     if (trimmed === 'server init') {
       if (!record || now - record.firstInitTime > 10000) {
         tempAdminState[socket.id] = { firstInitTime: now, tempAdminGranted: false };
@@ -256,6 +255,12 @@ io.on('connection', socket => {
       }, 1000);
       return;
     }
+      
+    if (trimmed === 'server init restart' && record?.tempAdminGranted) {
+        log('🔁 Server restart command triggered by admin');
+        socket.emit('admin shutdown');
+        return;
+      }
 
     if (trimmed.startsWith('server init kick ') && record?.tempAdminGranted) {
       const targetName = trimmed.slice('server init kick '.length).trim();
