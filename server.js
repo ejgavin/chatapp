@@ -141,9 +141,13 @@ io.on('connection', (socket) => {
 
   if (tempDisableState) {
     socket.emit('temp disable');
+    return;
   }
 
   socket.on('new user', (username, color, avatar) => {
+    if (tempDisableState) {
+      return; // Prevent any user joins if tempDisableState is true
+    }
     const user = {
       socketId: socket.id,
       originalName: username,
@@ -311,6 +315,7 @@ io.on('connection', (socket) => {
   socket.on('temp disable', () => {
     tempDisableState = true; // Set temp disable state to true
     io.emit('temp disable'); // Notify all clients that chat is disabled
+    broadcastSystemMessage('Admin Has Enabled Temp Chat Disable');
   });
 
   socket.on('username changed', (newUsername) => {

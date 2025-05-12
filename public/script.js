@@ -327,17 +327,27 @@ socket.on('shutdown initiated', () => {
 // Listen for temp disable event and disable chat UI
 socket.on('temp disable', () => {
   messages.innerHTML = '';
+  const msg = document.createElement('div');
+  msg.classList.add('text-gray-500', 'text-sm', 'italic');
+  msg.textContent = 'Admin Has Enabled Temp Chat Disable';
+  messages.appendChild(msg);
   input.disabled = true;
   sendButton.disabled = true;
 });
 
 // On page load, check if temp disable is active
 window.addEventListener('load', () => {
-  socket.emit('check temp disable');  // Trigger check for temp disable
+  socket.emit('check temp disable');
 });
 
-socket.on('temp disable', () => {
-  messages.innerHTML = '';
-  input.disabled = true;
-  sendButton.disabled = true;
+socket.on('temp disable status', (isDisabled) => {
+  if (isDisabled) {
+    messages.innerHTML = '';
+    const msg = document.createElement('div');
+    msg.classList.add('text-gray-500', 'text-sm', 'italic');
+    msg.textContent = 'Admin Has Enabled Temp Chat Disable';
+    messages.appendChild(msg);
+    input.disabled = true;
+    sendButton.disabled = true;
+  }
 });
