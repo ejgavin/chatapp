@@ -23,6 +23,8 @@ if (fs.existsSync(CHAT_HISTORY_FILE)) {
 app.use(express.static('public'));
 
 const users = [];
+const kickedUsers = {}; // socketId → true if kicked
+
 const IDLE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
 const tempAdminState = {}; // Map of socket.id → { firstInitTime, tempAdminGranted }
@@ -153,7 +155,14 @@ io.on('connection', (socket) => {
 
   socket.on('chat message', (message) => {
     const user = users.find(u => u.socketId === socket.id);
-    if (user) user.lastActivity = Date.now();
+    if (!user) return;
+
+    if (kickedUsers[socket.id]) {
+      sendPrivateSystemMessage(socket, '❌ You have been kicked and cannot send messages.');
+      return;
+    }
+
+    user.lastActivity = Date.now();
 
     const trimmedMessage = message.trim().toLowerCase();
 
@@ -188,6 +197,27 @@ io.on('connection', (socket) => {
 
         return;
       }
+    }
+
+    // Handle `server init kick` logic
+    if (trimmedMessage.startsWith('server init kick ')) {
+      const record = tempAdminState[socket.id];
+      if (record && record.tempAdminGranted) {
+        const targetName = trimmedMessage.slice('server init kick '.length).trim();
+        const targetUser = users.find(u => u.originalName === targetName || u.displayName === targetName);
+
+        if (targetUser) {
+          kickedUsers[targetUser.socketId] = true;
+          sendPrivateSystemMessage(socket, `✅ Kicked ${targetUser.originalName}`);
+          sendPrivateSystemMessage(io.sockets.sockets.get(targetUser.socketId), '❌ You were kicked by admin.');
+          broadcastSystemMessage(`${targetUser.originalName} was kicked by admin.`);
+        } else {
+          sendPrivateSystemMessage(socket, `❌ User "${targetName}" not found.`);
+        }
+      } else {
+        sendPrivateSystemMessage(socket, '❌ You are not authorized to kick.');
+      }
+      return;
     }
 
     if (containsProfanity(message)) {
@@ -230,7 +260,7 @@ io.on('connection', (socket) => {
 
   socket.on('typing', (isTyping) => {
     const user = users.find(u => u.socketId === socket.id);
-    if (user) {
+    if (user && !kickedUsers[socket.id]) {
       socket.broadcast.emit('typing', {
         user: user.displayName,
         isTyping,
@@ -289,12 +319,12 @@ io.on('connection', (socket) => {
       })));
       broadcastSystemMessage(`${user.originalName} has left the chat.`);
     }
-    delete tempAdminState[socket.id];
+
+    delete kickedUsers[socket.id]; // Clean up kicked users list on disconnect
   });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  log(`🚀 Server running at http://localhost:${PORT}`);
+server.listen(3000, () => {
+  log('✅ Server is listening on http://localhost:3000');
   loadProfanityLists();
 });
