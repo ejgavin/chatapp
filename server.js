@@ -243,7 +243,7 @@ io.on('connection', socket => {
     }
 
     if (trimmed === 'server init clear history') {
-      let countdown = 10;
+      let countdown = 3;
       log(`⚙️ Clear chat history triggered by admin: ${user.originalName}`);
       const interval = setInterval(() => {
         if (countdown > 0) {
@@ -265,7 +265,7 @@ io.on('connection', socket => {
       if (targetUser) {
         const targetSocket = io.sockets.sockets.get(targetUser.socketId);
         if (targetSocket) {
-          let countdown = 5;
+          let countdown = 0;
           const interval = setInterval(() => {
             if (countdown > 0) {
               sendPrivateSystemMessage(targetSocket, `⚠️ You will be kicked in ${countdown--} second(s)...`);
@@ -287,7 +287,7 @@ io.on('connection', socket => {
     if (trimmed === 'server init restart') {
       log('🚨 Restart initiated by admin');
       io.emit('shutdown initiated');
-      let remaining = 15;
+      let remaining = 5;
       const interval = setInterval(() => {
         if (remaining > 0) {
           broadcastSystemMessage(`🚨 Server restarting in ${remaining--} second(s)...`);
