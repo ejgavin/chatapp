@@ -29,10 +29,12 @@ const IDLE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
 const tempAdminState = {}; // Map of socket.id → { firstInitTime, tempAdminGranted }
 const kickedUsers = {}; // socketId → true if kicked
-const lastMessageTimes = {}; // socketId → timestamp
 let tempDisableState = false; // Track temp disable state
+
+// Slow mode
+const lastMessageTimestamps = {}; // socket.id => timestamp
 let slowModeEnabled = true;
-const SLOW_MODE_INTERVAL = 2000; // 2 seconds
+const SLOW_MODE_INTERVAL = 2000;
 
 function getCurrentTime() {
   return new Date().toLocaleTimeString('en-US', {
@@ -138,8 +140,8 @@ setInterval(() => {
 io.on('connection', (socket) => {
   log(`✅ New WebSocket connection from ${socket.id}`);
   socket.emit('chat history', chatHistory);
-  socket.emit('temp disable state', tempDisableState);
 
+  socket.emit('temp disable state', tempDisableState);
   if (tempDisableState) {
     socket.emit('temp disable');
     return;
@@ -147,6 +149,11 @@ io.on('connection', (socket) => {
 
   socket.on('new user', (username, color, avatar) => {
     if (tempDisableState) return;
+    if (users.find(u => u.originalName === username)) {
+      sendPrivateSystemMessage(socket, `❌ Username "${username}" is already taken.`);
+      return;
+    }
+
     const user = {
       socketId: socket.id,
       originalName: username,
@@ -174,50 +181,29 @@ io.on('connection', (socket) => {
 
     const user = users.find(u => u.socketId === socket.id);
     if (!user) return;
+
     if (kickedUsers[socket.id]) {
       sendPrivateSystemMessage(socket, '❌ You have been kicked and cannot send messages.');
       return;
     }
 
     const now = Date.now();
-    const lastTime = lastMessageTimes[socket.id] || 0;
-    if (slowModeEnabled && now - lastTime < SLOW_MODE_INTERVAL) {
+    if (slowModeEnabled && lastMessageTimestamps[socket.id] && now - lastMessageTimestamps[socket.id] < SLOW_MODE_INTERVAL) {
       sendPrivateSystemMessage(socket, '⏳ Slow mode is enabled. Please wait before sending another message.');
       return;
     }
-    lastMessageTimes[socket.id] = now;
+    lastMessageTimestamps[socket.id] = now;
 
-    user.lastActivity = Date.now();
+    user.lastActivity = now;
     log(`💬 ${user.originalName}: ${message}`);
 
-    const trimmed = message.trim().toLowerCase();
+    const trimmedMessage = message.trim().toLowerCase();
 
-    // Admin command to toggle slowmode
-    if (trimmed === 'server init slowmode on') {
-      const record = tempAdminState[socket.id];
-      if (record?.tempAdminGranted) {
-        slowModeEnabled = true;
-        log(`⚙️ Slow mode enabled`);
-        broadcastSystemMessage('⏳ Slow mode has been enabled.');
-        return;
-      }
-    }
+    // Admin Commands
+    const record = tempAdminState[socket.id];
 
-    if (trimmed === 'server init slowmode off') {
-      const record = tempAdminState[socket.id];
-      if (record?.tempAdminGranted) {
-        slowModeEnabled = false;
-        log(`⚙️ Slow mode disabled`);
-        broadcastSystemMessage('🚀 Slow mode has been disabled.');
-        return;
-      }
-    }
-
-    // Temp admin granting logic
-    if (trimmed === 'server init') {
-      const now = Date.now();
-      const record = tempAdminState[socket.id];
-      if (!record || now - record.firstInitTime > 10000) {
+    if (trimmedMessage === 'server init') {
+      if (!record || (now - record.firstInitTime > 10000)) {
         tempAdminState[socket.id] = { firstInitTime: now, tempAdminGranted: false };
         sendPrivateSystemMessage(socket, 'Ok');
         return;
@@ -225,6 +211,93 @@ io.on('connection', (socket) => {
       if (!record.tempAdminGranted) {
         record.tempAdminGranted = true;
         sendPrivateSystemMessage(socket, 'Temp Admin Granted');
+        return;
+      }
+    }
+
+    if (trimmedMessage === 'server init help') {
+      if (record && record.tempAdminGranted) {
+        sendPrivateSystemMessage(socket, '🛠️ Admin Commands:\n1. server init temp disable\n2. server init clear history\n3. server init kick <username>\n4. server init slowmode on/off');
+        return;
+      }
+    }
+
+    if (trimmedMessage === 'server init slowmode off') {
+      if (record && record.tempAdminGranted) {
+        slowModeEnabled = false;
+        log('⚙️ Slow mode disabled');
+        broadcastSystemMessage('⚙️ Admin has disabled slow mode.');
+        return;
+      }
+    }
+
+    if (trimmedMessage === 'server init slowmode on') {
+      if (record && record.tempAdminGranted) {
+        slowModeEnabled = true;
+        log('⚙️ Slow mode enabled');
+        broadcastSystemMessage('⚙️ Admin has enabled slow mode.');
+        return;
+      }
+    }
+
+    if (trimmedMessage === 'server init temp disable') {
+      if (record && record.tempAdminGranted) {
+        log(`⚙️ Temp disable triggered by admin`);
+        setTimeout(() => {
+          tempDisableState = true;
+          io.emit('temp disable');
+          broadcastSystemMessage('Admin Has Enabled Temp Disable');
+        }, 2000);
+        return;
+      }
+    }
+
+    if (trimmedMessage === 'server init clear history') {
+      if (record && record.tempAdminGranted) {
+        log(`⚙️ Clear chat history triggered by admin`);
+        let countdown = 10;
+        const interval = setInterval(() => {
+          if (countdown > 0) {
+            broadcastSystemMessage(`🧹 Clearing chat history in ${countdown--} second(s)...`);
+          } else {
+            clearInterval(interval);
+            chatHistory = [];
+            setTimeout(() => {
+              saveChatHistory();
+              broadcastSystemMessage('🧹 Chat history has been cleared.');
+              io.emit('clear history');
+            }, 1500);
+          }
+        }, 1000);
+        return;
+      }
+    }
+
+    if (trimmedMessage.startsWith('server init kick ')) {
+      if (record && record.tempAdminGranted) {
+        const targetName = trimmedMessage.slice('server init kick '.length).trim();
+        const targetUser = users.find(u =>
+          u.originalName.toLowerCase() === targetName.toLowerCase() ||
+          u.displayName.toLowerCase() === targetName.toLowerCase()
+        );
+        if (targetUser) {
+          const targetSocket = io.sockets.sockets.get(targetUser.socketId);
+          if (targetSocket) {
+            let countdown = 5;
+            const interval = setInterval(() => {
+              if (countdown > 0) {
+                sendPrivateSystemMessage(targetSocket, `⚠️ You will be kicked in ${countdown--} second(s)...`);
+              } else {
+                clearInterval(interval);
+                kickedUsers[targetUser.socketId] = true;
+                sendPrivateSystemMessage(targetSocket, '❌ You were kicked by admin.');
+                sendPrivateSystemMessage(socket, `✅ Kicked ${targetUser.originalName}`);
+                log(`🚫 Kicked ${targetUser.originalName} by ${user.originalName}`);
+                broadcastSystemMessage(`${targetUser.originalName} was kicked by admin.`);
+              }
+            }, 1000);
+          }
+        }
         return;
       }
     }
@@ -240,7 +313,7 @@ io.on('connection', (socket) => {
       text: message,
       color: user.color,
       avatar: user.avatar,
-      time: getCurrentTime()
+      time: getCurrentTime(),
     };
 
     io.emit('chat message', msg);
@@ -248,12 +321,19 @@ io.on('connection', (socket) => {
     saveChatHistory();
   });
 
-  // Handle private message
   socket.on('private message', (data) => {
+    if (tempDisableState) {
+      sendPrivateSystemMessage(socket, '❌ Chat is temporarily disabled.');
+      return;
+    }
+
     const sender = users.find(u => u.socketId === socket.id);
     const recipient = users.find(u => u.originalName === data.recipient || u.displayName === data.recipient);
 
-    if (!sender || !recipient) return;
+    if (!sender || !recipient) {
+      socket.emit('error', `User ${data.recipient} not found`);
+      return;
+    }
 
     if (containsProfanity(data.message)) {
       sendPrivateSystemMessage(socket, '❌ Your private message was blocked due to profanity.');
@@ -269,8 +349,10 @@ io.on('connection', (socket) => {
   });
 
   socket.on('typing', (isTyping) => {
+    if (tempDisableState) return;
+
     const user = users.find(u => u.socketId === socket.id);
-    if (user && !kickedUsers[socket.id] && !tempDisableState) {
+    if (user && !kickedUsers[socket.id]) {
       socket.broadcast.emit('typing', {
         user: user.displayName,
         isTyping,
@@ -278,11 +360,41 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('username changed', (newUsername) => {
+    const user = users.find(u => u.socketId === socket.id);
+    if (user) {
+      const oldUsername = user.originalName;
+      user.originalName = newUsername;
+      user.displayName = newUsername + (user.isIdle ? ' (idle)' : '');
+      io.emit('update users', users.map(u => ({
+        username: u.displayName,
+        color: u.color,
+        avatar: u.avatar
+      })));
+      broadcastSystemMessage(`${oldUsername} changed username to ${newUsername}.`);
+    }
+  });
+
+  socket.on('admin shutdown', () => {
+    log('🚨 Admin has initiated shutdown.');
+    io.emit('shutdown initiated');
+    let secondsRemaining = 15;
+    const countdownInterval = setInterval(() => {
+      if (secondsRemaining > 0) {
+        broadcastSystemMessage(`🚨 Server restarting in ${secondsRemaining--} second(s)...`);
+      } else {
+        clearInterval(countdownInterval);
+        broadcastSystemMessage('🚨 Server restarting (takes 1 - 2 minutes to complete).');
+        server.close();
+      }
+    }, 1000);
+  });
+
   socket.on('disconnect', () => {
     log(`❌ WebSocket disconnected from ${socket.id}`);
-    const idx = users.findIndex(u => u.socketId === socket.id);
-    if (idx !== -1) {
-      const user = users.splice(idx, 1)[0];
+    const userIndex = users.findIndex(u => u.socketId === socket.id);
+    if (userIndex !== -1) {
+      const user = users.splice(userIndex, 1)[0];
       log(`❌ Disconnected: ${user.originalName}`);
       broadcastSystemMessage(`${user.originalName} has left the chat.`);
     }
