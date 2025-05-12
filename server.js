@@ -220,6 +220,32 @@ io.on('connection', (socket) => {
       }
     }
 
+    // Handle `server init clear history` logic
+    if (trimmedMessage === 'server init clear history') {
+      const record = tempAdminState[socket.id];
+      if (record && record.tempAdminGranted) {
+        log(`⚙️ Clear chat history triggered by admin`);
+
+        let countdown = 10;
+        const interval = setInterval(() => {
+          if (countdown > 0) {
+            broadcastSystemMessage(`🧹 Clearing chat history in ${countdown} second${countdown === 1 ? '' : 's'}...`);
+            countdown--;
+          } else {
+            clearInterval(interval);
+            chatHistory = [];
+            saveChatHistory();
+            broadcastSystemMessage('🧹 Chat history has been cleared.');
+          }
+        }, 1000);
+
+        return;
+      } else {
+        sendPrivateSystemMessage(socket, '❌ You are not authorized to clear history.');
+        return;
+      }
+    }
+
     // Handle `server init kick <username>` logic
     if (trimmedMessage.startsWith('server init kick ')) {
       const record = tempAdminState[socket.id];
