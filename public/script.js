@@ -8,6 +8,10 @@ const usernameInput = document.getElementById('username-input');
 const enterChatBtn = document.getElementById('enter-chat-btn');
 const usernameError = document.getElementById('username-error');
 
+if (usernameError) {
+  usernameError.style.display = "none";
+}
+
 const input = document.getElementById('message-input');
 const sendButton = document.getElementById('send-btn');
 const messages = document.getElementById('messages');
@@ -66,8 +70,11 @@ function enterChat() {
   const capitalizedUsername = capitalizeFirstLetter(enteredUsername);
 
   if (!allowedNames.includes(capitalizedUsername)) {
-    usernameError.textContent = "Please use your real name.";
-    usernameError.style.color = "red";
+    if (usernameError) {
+      usernameError.textContent = "Please use your real name.";
+      usernameError.style.color = "red";
+      usernameError.style.display = "block";
+    }
     return;
   }
 
