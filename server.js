@@ -194,6 +194,7 @@ io.on('connection', (socket) => {
       return;
     }
 
+    // Only send private message if no profanity
     log(`📩 Private from ${sender.displayName} to ${recipient.displayName}: ${data.message}`);
     io.to(recipient.socketId).emit('private message', {
       user: sender.displayName,
