@@ -195,6 +195,11 @@ io.on('connection', socket => {
       }
     }
 
+    if (trimmed.startsWith('server init') && (!record || !record.tempAdminGranted)) {
+      sendPrivateSystemMessage(socket, '❌ You are not authorized to use admin commands.');
+      return;
+    }
+
     if (trimmed === 'server init help' && record?.tempAdminGranted) {
       sendPrivateSystemMessage(socket, '🛠️ Admin Commands:\n1. server init temp disable\n2. server init temp disable off\n3. server init clear history\n4. server init kick <username>\n5. server init slowmode on/off');
       return;
