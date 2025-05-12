@@ -1,17 +1,20 @@
 const express = require('express');
 const http = require('http');
 const fs = require('fs');
-const https = require('https');
-const { Server } = require('socket.io');
 const path = require('path');
+const { Server } = require('socket.io');
+const fetch = require('node-fetch');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
 const CHAT_HISTORY_FILE = path.join(__dirname, 'chat-history.json');
+const LOCAL_BADWORDS_FILE = path.join(__dirname, 'badwords.json');
 let chatHistory = [];
+let badWords = new Set();
 
+// Load chat history
 if (fs.existsSync(CHAT_HISTORY_FILE)) {
   try {
     chatHistory = JSON.parse(fs.readFileSync(CHAT_HISTORY_FILE, 'utf8'));
@@ -19,6 +22,27 @@ if (fs.existsSync(CHAT_HISTORY_FILE)) {
     log(`❌ Error reading chat history: ${err}`);
   }
 }
+
+// Load bad words from local and remote sources
+(async () => {
+  try {
+    if (fs.existsSync(LOCAL_BADWORDS_FILE)) {
+      const localWords = JSON.parse(fs.readFileSync(LOCAL_BADWORDS_FILE, 'utf8'));
+      localWords.forEach(word => badWords.add(word.toLowerCase()));
+    }
+
+    const res = await fetch('https://raw.githubusercontent.com/zacanger/profane-words/3ebc6d0910d99df7d12fe1aa1749bf5f939d6a5b/words.json');
+    if (res.ok) {
+      const remoteWords = await res.json();
+      remoteWords.forEach(word => badWords.add(word.toLowerCase()));
+      log(`🧼 Loaded ${badWords.size} bad words`);
+    } else {
+      log(`❌ Failed to fetch remote bad words list: ${res.status}`);
+    }
+  } catch (err) {
+    log(`❌ Error loading bad words: ${err}`);
+  }
+})();
 
 app.use(express.static('public'));
 
@@ -56,33 +80,29 @@ function broadcastSystemMessage(text) {
   saveChatHistory();
 }
 
+function sendPrivateSystemMessage(socket, text) {
+  socket.emit('chat message', {
+    user: 'Server',
+    text,
+    color: '#000000',
+    avatar: 'S',
+    time: getCurrentTime(),
+  });
+}
+
 function saveChatHistory() {
   fs.writeFile(CHAT_HISTORY_FILE, JSON.stringify(chatHistory, null, 2), (err) => {
     if (err) log(`❌ Error saving chat history: ${err}`);
   });
 }
 
-// Load bad words from remote URL
-const BAD_WORDS_URL = 'https://www.cs.cmu.edu/~biglou/resources/bad-words.txt';
-let badWords = new Set();
-
-function fetchBadWords() {
-  https.get(BAD_WORDS_URL, (res) => {
-    let data = '';
-    res.on('data', chunk => data += chunk);
-    res.on('end', () => {
-      badWords = new Set(
-        data.split('\n').map(w => w.trim().toLowerCase()).filter(Boolean)
-      );
-      log(`🛡️ Loaded ${badWords.size} bad words from remote`);
-    });
-  }).on('error', err => {
-    log(`❌ Failed to fetch bad words list: ${err.message}`);
-  });
+function containsProfanity(text) {
+  return text
+    .toLowerCase()
+    .split(/\b|\s+/)
+    .some(word => badWords.has(word));
 }
-fetchBadWords();
 
-// Idle status check every 5 seconds
 setInterval(() => {
   const now = Date.now();
   let userListChanged = false;
@@ -111,7 +131,7 @@ setInterval(() => {
       avatar: u.avatar
     })));
   }
-}, 5000);
+}, 5 * 1000);
 
 io.on('connection', (socket) => {
   log(`✅ New WebSocket connection from ${socket.id}`);
@@ -143,14 +163,9 @@ io.on('connection', (socket) => {
       user.lastActivity = Date.now();
     }
 
-    const lowerMessage = message.toLowerCase();
-    const containsBadWord = [...badWords].some(word =>
-      lowerMessage.includes(word)
-    );
-
-    if (containsBadWord) {
-      log(`🚫 Blocked message from ${user?.displayName || 'Unknown'} due to bad language`);
-      socket.emit('warning', '🚫 Your message contained inappropriate language and was not sent.');
+    if (containsProfanity(message)) {
+      log(`🚫 Message blocked from ${user?.displayName || 'Unknown'}: ${message}`);
+      sendPrivateSystemMessage(socket, '❌ Your message was blocked due to profanity.');
       return;
     }
 
