@@ -351,3 +351,14 @@ socket.on('temp disable status', (isDisabled) => {
     sendButton.disabled = true;
   }
 });
+
+// Listen for "you were kicked" event and disable chat UI
+socket.on('you were kicked', () => {
+  input.disabled = true;
+  sendButton.disabled = true;
+
+  const msg = document.createElement('div');
+  msg.classList.add('text-red-500', 'text-sm', 'italic');
+  msg.textContent = 'You were kicked by an admin and can no longer send messages.';
+  messages.appendChild(msg);
+});
