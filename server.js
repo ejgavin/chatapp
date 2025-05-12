@@ -63,17 +63,6 @@ function saveChatHistory() {
   });
 }
 
-function sendPrivateSystemMessage(socket, text) {
-  const message = {
-    user: 'Server',
-    text,
-    color: '#000000',
-    avatar: 'S',
-    time: getCurrentTime(),
-  };
-  socket.emit('private message', message);
-}
-
 // Load bad words from external sources
 let badWords = [];
 const profanityUrls = [
@@ -83,7 +72,6 @@ const profanityUrls = [
 
 async function loadBadWords() {
   try {
-    // Load bad words from each URL
     for (let url of profanityUrls) {
       const response = await axios.get(url);
       if (url.endsWith('.txt')) {
@@ -101,7 +89,6 @@ async function loadBadWords() {
   }
 }
 
-// Call the function to load bad words
 loadBadWords();
 
 function containsProfanity(message) {
@@ -138,7 +125,7 @@ setInterval(() => {
       avatar: u.avatar
     })));
   }
-}, 5 * 1000); // every 5 seconds
+}, 5000);
 
 io.on('connection', (socket) => {
   log(`✅ New WebSocket connection from ${socket.id}`);
@@ -178,11 +165,17 @@ io.on('connection', (socket) => {
     };
     log(`💬 ${msg.user}: ${msg.text}`);
 
-    // Check for profanity
     if (containsProfanity(msg.text)) {
       log(`🚫 Message blocked due to profanity: ${msg.text}`);
-      sendPrivateSystemMessage(socket, '❌ Your message was blocked due to profanity.');
-      return; // Don't send the message to anyone
+      const warningMsg = {
+        user: 'Server',
+        text: '❌ Your message was blocked due to profanity.',
+        color: '#000000',
+        avatar: 'S',
+        time: getCurrentTime(),
+      };
+      socket.emit('chat message', warningMsg);
+      return;
     }
 
     io.emit('chat message', msg);
@@ -199,15 +192,19 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // Check if the private message contains profanity
     if (containsProfanity(data.message)) {
       log(`🚫 Private message blocked from ${sender.displayName} to ${recipient.displayName}: ${data.message}`);
-      // Send system message only to the sender, no message to recipient or sender about blocked message
-      sendPrivateSystemMessage(socket, '❌ Your private message was blocked due to profanity.');
-      return; // Don't send the message to anyone
+      const warningMsg = {
+        user: 'Server',
+        text: '❌ Your private message was blocked due to profanity.',
+        color: '#000000',
+        avatar: 'S',
+        time: getCurrentTime(),
+      };
+      socket.emit('chat message', warningMsg);
+      return;
     }
 
-    // Only send private message if no profanity
     log(`📩 Private from ${sender.displayName} to ${recipient.displayName}: ${data.message}`);
     io.to(recipient.socketId).emit('private message', {
       user: sender.displayName,
@@ -255,12 +252,11 @@ io.on('connection', (socket) => {
         clearInterval(countdownInterval);
         broadcastSystemMessage('🔁 Server is now restarting (takes about 1 - 2 minutes)...');
 
-        // Allow the message to broadcast before shutdown
         setTimeout(() => {
-          saveChatHistory(); // Final save
+          saveChatHistory();
           server.close(() => {
             log('🛑 Server has shut down.');
-            process.exit(0); // End the process
+            process.exit(0);
           });
         }, 1000);
       }
