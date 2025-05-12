@@ -255,68 +255,70 @@ function logPrivateMessage(text) {
   const item = document.createElement('div');
   item.innerHTML = `
     <div class="bg-blue-100 p-2 rounded-md">
-      <strong>Private message: </strong>${sanitize(text)}
+      <strong>Private to ${privateRecipient}: </strong>${sanitize(text)}
     </div>
   `;
   messages.appendChild(item);
   messages.scrollTop = messages.scrollHeight;
 }
 
-function sanitize(text) {
+function sanitize(input) {
   const div = document.createElement('div');
-  div.textContent = text;
+  div.innerText = input;
   return div.innerHTML;
 }
 
+// IDLE DETECTION
 function startIdleDetection() {
-  function resetIdleTimeout() {
-    lastInteractionTime = Date.now();
+  document.addEventListener('mousemove', resetIdleTimer);
+  document.addEventListener('keypress', resetIdleTimer);
+  resetIdleTimer();
+}
+
+function resetIdleTimer() {
+  if (userStatus !== 'active') {
+    userStatus = 'active';
+    socket.emit('update status', { status: 'active' });
   }
 
-  function checkIdleStatus() {
-    if (Date.now() - lastInteractionTime > idleLimit) {
-      userStatus = 'idle';
-    } else {
-      userStatus = 'active';
-    }
-    socket.emit('status update', userStatus);
-  }
+  clearTimeout(idleTimeout);
+  idleTimeout = setTimeout(() => {
+    userStatus = 'idle';
+    socket.emit('update status', { status: 'idle' });
+  }, idleLimit);
 
-  window.addEventListener('mousemove', resetIdleTimeout);
-  window.addEventListener('keydown', resetIdleTimeout);
-
-  setInterval(checkIdleStatus, 1000);
+  lastInteractionTime = Date.now();
 }
 
 function startStatusLogging() {
   setInterval(() => {
-    console.log(`${username} is ${userStatus}`);
+    const idleDuration = Math.round((Date.now() - lastInteractionTime) / 1000);
+    console.log(`User ${username} status: ${userStatus} (Last interaction: ${idleDuration} seconds ago)`);
   }, statusLogInterval);
 }
 
-// Admin Login
-document.addEventListener('DOMContentLoaded', () => {
-  const adminPasswordInput = document.getElementById('admin-password');
-  const adminLoginBtn = document.getElementById('admin-login-btn');
-  const adminLoginError = document.getElementById('admin-login-error');
-  const settingsModal = document.getElementById('settings-modal');
-  
-  const adminPassword = 'eliadmin123';
+socket.on('update status', ({ username, status }) => {
+  const userElement = document.querySelector(`[data-username="${username}"]`);
+  if (userElement) {
+    const statusText = status === 'idle' ? '(Idle)' : '';
+    userElement.innerHTML = `${username} ${statusText}`;
+  }
+});
 
-  adminLoginBtn.addEventListener('click', () => {
-    const enteredPassword = adminPasswordInput.value.trim();
-    
-    if (enteredPassword === adminPassword) {
-      adminLoginError.classList.add('hidden');
-      settingsModal.classList.add('hidden');
-      
-      alert('Admin login successful!');
-    } else {
-      adminLoginError.classList.remove('hidden');
-    }
-  });
+// 🔒 SHUTDOWN FUNCTIONALITY
+document.getElementById('shutdown-btn').addEventListener('click', () => {
+  const password = document.getElementById('shutdown-password').value;
+  const errorMsg = document.getElementById('shutdown-error');
+  if (password === 'eliadmin123') {
+    socket.emit('admin shutdown');
+    errorMsg.classList.add('hidden');
+  } else {
+    errorMsg.classList.remove('hidden');
+  }
+});
 
-  adminPasswordInput.addEventListener('input', () => {
-    adminLoginError.classList.add('hidden');
-  });
+socket.on('shutdown initiated', () => {
+  messages.innerHTML = '';
+  input.disabled = true;
+  sendButton.disabled = true;
 });
