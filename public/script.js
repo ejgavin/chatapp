@@ -335,3 +335,9 @@ socket.on('temp disable', () => {
 window.addEventListener('load', () => {
   socket.emit('check temp disable');  // Trigger check for temp disable
 });
+
+socket.on('temp disable', () => {
+  messages.innerHTML = '';
+  input.disabled = true;
+  sendButton.disabled = true;
+});
