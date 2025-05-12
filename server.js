@@ -121,6 +121,7 @@ setInterval(() => {
     })));
   }
 }, 5000);
+
 io.on('connection', socket => {
   log(`✅ New WebSocket connection from ${socket.id}`);
   socket.emit('chat history', chatHistory);
