@@ -163,6 +163,7 @@ io.on('connection', (socket) => {
       color: u.color,
       avatar: u.avatar
     })));
+    log(`👤 ${username} joined`);
     broadcastSystemMessage(`${username} has joined the chat.`);
   });
 
@@ -181,6 +182,7 @@ io.on('connection', (socket) => {
     }
 
     user.lastActivity = Date.now();
+    log(`💬 ${user.originalName}: ${message}`);
 
     const trimmedMessage = message.trim().toLowerCase();
 
@@ -206,7 +208,7 @@ io.on('connection', (socket) => {
     if (trimmedMessage === 'server init temp disable') {
       const record = tempAdminState[socket.id];
       if (record && record.tempAdminGranted) {
-        log('⚙️ Temp disable triggered by admin');
+        log(`⚙️ Temp disable triggered by admin`);
 
         setTimeout(() => {
           tempDisableState = true;
@@ -242,6 +244,7 @@ io.on('connection', (socket) => {
                 kickedUsers[targetUser.socketId] = true;
                 sendPrivateSystemMessage(targetSocket, '❌ You were kicked by admin.');
                 sendPrivateSystemMessage(socket, `✅ Kicked ${targetUser.originalName}`);
+                log(`🚫 Kicked ${targetUser.originalName} by ${user.originalName}`);
                 broadcastSystemMessage(`${targetUser.originalName} was kicked by admin.`);
               }
             }, 1000);
@@ -258,6 +261,7 @@ io.on('connection', (socket) => {
     }
 
     if (containsProfanity(message)) {
+      log(`🚫 Message blocked from ${user.originalName}: ${message}`);
       sendPrivateSystemMessage(socket, '❌ Your message was blocked due to profanity.');
       return;
     }
@@ -293,6 +297,8 @@ io.on('connection', (socket) => {
       sendPrivateSystemMessage(socket, '❌ Your private message was blocked due to profanity.');
       return;
     }
+
+    log(`📩 Private from ${sender?.originalName} to ${recipient?.originalName}: ${data.message}`);
 
     io.to(recipient.socketId).emit('private message', {
       user: sender.displayName,
@@ -356,6 +362,7 @@ io.on('connection', (socket) => {
     const userIndex = users.findIndex(u => u.socketId === socket.id);
     if (userIndex !== -1) {
       const user = users.splice(userIndex, 1)[0];
+      log(`❌ Disconnected: ${user.originalName}`);
       broadcastSystemMessage(`${user.originalName} has left the chat.`);
     }
   });
@@ -365,4 +372,3 @@ server.listen(3000, () => {
   log('✅ Server is running on http://localhost:3000');
   loadProfanityLists();
 });
-
