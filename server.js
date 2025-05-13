@@ -205,7 +205,7 @@ io.on('connection', socket => {
 
     // Admin Command Handlers
     if (trimmed === 'server init help') {
-      sendPrivateSystemMessage(socket, '🛠️ Admin Commands:\n1. server init temp disable\n2. server init temp disable off\n3. server init clear history\n4. server init kick <username>\n5. server init slowmode on/off\n6. server init restart');
+      sendPrivateSystemMessage(socket, '🛠️ Admin Commands:\n1. server init temp disable\n2. server init temp disable off\n3. server init clear history\n4. server init kick <username>\n5. server init slowmode on/off\n6. server init restart\n7. server init slowmode <time>');
       log(`💬 ${user.originalName}: ${message}`);
       return;
     }
