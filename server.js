@@ -131,10 +131,6 @@ io.on('connection', socket => {
 
   socket.on('new user', (username, color, avatar) => {
     if (tempDisableState) return;
-    if (users.some(u => u.originalName === username)) {
-      sendPrivateSystemMessage(socket, `❌ Username "${username}" is already taken.`);
-      return;
-    }
 
     const user = {
       socketId: socket.id,
