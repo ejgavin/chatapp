@@ -405,14 +405,16 @@ io.on('connection', socket => {
   });
 
     socket.on('disconnect', () => {
-        log(`❌ WebSocket disconnected from ${socket.id}`);
-        const userIndex = users.findIndex(u => u.socketId === socket.id);
-        if (userIndex !== -1) {
-          const user = users.splice(userIndex, 1)[0];
-          log(`❌ Disconnected: ${user.originalName}`);
-          broadcastSystemMessage(`${user.originalName} has left the chat.`);
-        }
-      });
+      log(`❌ WebSocket disconnected from ${socket.id}`);
+      const userIndex = users.findIndex(u => u.socketId === socket.id);
+      if (userIndex !== -1) {
+        const user = users.splice(userIndex, 1)[0];
+        log(`❌ Disconnected: ${user.originalName}`);
+        broadcastSystemMessage(`${user.originalName} has left the chat.`);
+
+        // 🔧 Emit updated user list to all clients
+        io.emit('user list', users.map(u => u.originalName));
+      }
     });
 
 server.listen(3000, () => {
