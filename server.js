@@ -129,47 +129,47 @@ io.on('connection', socket => {
     return;
   }
 
-    socket.on('new user', (username, color, avatar) => {
-      if (tempDisableState) return;
+  socket.on('new user', (username, color, avatar) => {
+    if (tempDisableState) return;
 
-      // Function to generate a unique username
-      function generateUniqueUsername(baseName) {
-        let name = baseName;
-        let suffix = 2;
-        const existingNames = users.map(u => u.originalName.toLowerCase());
+    // Function to generate a unique username
+    function generateUniqueUsername(baseName) {
+      let name = baseName;
+      let suffix = 2;
+      const existingNames = users.map(u => u.originalName.toLowerCase());
 
-        while (existingNames.includes(name.toLowerCase())) {
-          name = `${baseName}${suffix}`;
-          suffix++;
-        }
-
-        return name;
+      while (existingNames.includes(name.toLowerCase())) {
+        name = `${baseName}${suffix}`;
+        suffix++;
       }
 
-      // Generate a unique username
-      const uniqueUsername = generateUniqueUsername(username);
+      return name;
+    }
 
-      const user = {
-        socketId: socket.id,
-        originalName: uniqueUsername,
-        displayName: uniqueUsername,
-        color,
-        avatar,
-        lastActivity: Date.now(),
-        isIdle: false,
-      };
+    // Generate a unique username
+    const uniqueUsername = generateUniqueUsername(username);
 
-      users.push(user);
+    const user = {
+      socketId: socket.id,
+      originalName: uniqueUsername,
+      displayName: uniqueUsername,
+      color,
+      avatar,
+      lastActivity: Date.now(),
+      isIdle: false,
+    };
 
-      io.emit('update users', users.map(u => ({
-        username: u.displayName,
-        color: u.color,
-        avatar: u.avatar
-      })));
+    users.push(user);
 
-      log(`👤 ${uniqueUsername} joined`);
-      broadcastSystemMessage(`${uniqueUsername} has joined the chat.`);
-    });
+    io.emit('update users', users.map(u => ({
+      username: u.displayName,
+      color: u.color,
+      avatar: u.avatar
+    })));
+
+    log(`👤 ${uniqueUsername} joined`);
+    broadcastSystemMessage(`${uniqueUsername} has joined the chat.`);
+  });
 
   socket.on('chat message', message => {
     const user = users.find(u => u.socketId === socket.id);
@@ -404,19 +404,20 @@ io.on('connection', socket => {
     }
   });
 
-    socket.on('disconnect', () => {
-        const index = users.findIndex(u => u.socketId === socket.id);
-        if (index !== -1) {
-          const [user] = users.splice(index, 1);
-          log(`❌ Disconnected: ${user.originalName}`);
-          io.emit('update users', users.map(u => ({
-            username: u.displayName,
-            color: u.color,
-            avatar: u.avatar
-          })));
-          broadcastSystemMessage(`${user.originalName} has left the chat.`);
-        }
-      });
+  socket.on('disconnect', () => {
+    const index = users.findIndex(u => u.socketId === socket.id);
+    if (index !== -1) {
+      const [user] = users.splice(index, 1);
+      log(`❌ Disconnected: ${user.originalName}`);
+      io.emit('update users', users.map(u => ({
+        username: u.displayName,
+        color: u.color,
+        avatar: u.avatar
+      })));
+      broadcastSystemMessage(`${user.originalName} has left the chat.`);
+    }
+  });
+});
 
 server.listen(3000, () => {
   log('✅ Server is running on http://localhost:3000');
