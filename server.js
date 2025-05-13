@@ -30,6 +30,7 @@ const kickedUsers = {};
 let tempDisableState = false;
 const lastMessageTimestamps = {};
 let slowModeEnabled = true;
+let slowModeInterval = SLOW_MODE_INTERVAL;
 const SLOW_MODE_INTERVAL = 2000;
 
 function getCurrentTime() {
@@ -214,7 +215,7 @@ io.on('connection', socket => {
     if (
       slowModeEnabled &&
       lastMessageTimestamps[socket.id] &&
-      now - lastMessageTimestamps[socket.id] < SLOW_MODE_INTERVAL &&
+      now - lastMessageTimestamps[socket.id] < slowModeInterval &&
       !trimmed.startsWith('server init')
     ) {
       sendPrivateSystemMessage(socket, '⏳ Slow mode is enabled. Please wait.');
