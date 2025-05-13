@@ -91,11 +91,6 @@ async function loadProfanityLists() {
   }
 }
 
-function containsProfanity(msg) {
-  const normalizedMsg = msg.toLowerCase().replace(/\s+/g, ''); // Remove spaces
-  return [...profanityList].some(profaneWord => normalizedMsg.includes(profaneWord));
-}
-
 setInterval(() => {
   const now = Date.now();
   let changed = false;
@@ -133,20 +128,14 @@ io.on('connection', socket => {
 
   socket.on('new user', (username, color, avatar) => {
     if (tempDisableState) return;
-
-    // Check for duplicate usernames
-    let originalUsername = username;
-    let usernameCount = 1;
-
-    // Check if any user already has this username
-    while (users.some(u => u.originalName === username)) {
-      usernameCount++;
-      username = `${originalUsername}${usernameCount}`;
+    if (users.some(u => u.originalName === username)) {
+      sendPrivateSystemMessage(socket, `❌ Username "${username}" is already taken.`);
+      return;
     }
 
     const user = {
       socketId: socket.id,
-      originalName: originalUsername,
+      originalName: username,
       displayName: username,
       color,
       avatar,
