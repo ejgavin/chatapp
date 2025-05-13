@@ -404,7 +404,7 @@ io.on('connection', socket => {
     }
   });
 
-    socket.on('disconnect', () => {
+  socket.on('disconnect', () => {
       log(`❌ WebSocket disconnected from ${socket.id}`);
       const userIndex = users.findIndex(u => u.socketId === socket.id);
       if (userIndex !== -1) {
