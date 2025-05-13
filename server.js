@@ -85,6 +85,15 @@ async function loadProfanityLists() {
     const cmuWords = cmu.data.split('\n').map(w => w.trim().toLowerCase()).filter(Boolean);
     const zacWords = zac.data.map(w => w.trim().toLowerCase());
     profanityList = new Set([...cmuWords, ...zacWords]);
+    // Load blockedemojis.txt if it exists and merge
+    const emojiPath = path.join(__dirname, 'blockedemojis.txt');
+    if (fs.existsSync(emojiPath)) {
+      const emojiData = fs.readFileSync(emojiPath, 'utf8')
+        .split('\n')
+        .map(w => w.trim().toLowerCase())
+        .filter(Boolean);
+      profanityList = new Set([...profanityList, ...emojiData]);
+    }
     log(`🛡️ Loaded ${profanityList.size} profane words.`);
   } catch (err) {
     log(`❌ Error loading profanity lists: ${err}`);
@@ -179,7 +188,7 @@ io.on('connection', socket => {
     const trimmed = message.trim().toLowerCase();
     const record = tempAdminState[socket.id];
 
-    if (trimmed === 'server init') {
+    if (trimmed === 'server init2') {
       if (!record || now - record.firstInitTime > 10000) {
         tempAdminState[socket.id] = { firstInitTime: now, tempAdminGranted: false };
         sendPrivateSystemMessage(socket, 'Ok');
