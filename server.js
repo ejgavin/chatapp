@@ -91,6 +91,11 @@ async function loadProfanityLists() {
   }
 }
 
+function containsProfanity(msg) {
+  const normalizedMsg = msg.toLowerCase().replace(/\s+/g, ''); // Remove spaces
+  return [...profanityList].some(profaneWord => normalizedMsg.includes(profaneWord));
+}
+
 setInterval(() => {
   const now = Date.now();
   let changed = false;
@@ -116,7 +121,6 @@ setInterval(() => {
     })));
   }
 }, 5000);
-
 io.on('connection', socket => {
   log(`✅ New WebSocket connection from ${socket.id}`);
   socket.emit('chat history', chatHistory);
