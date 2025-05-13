@@ -211,7 +211,12 @@ io.on('connection', socket => {
       return;
     }
 
-    if (slowModeEnabled && lastMessageTimestamps[socket.id] && now - lastMessageTimestamps[socket.id] < SLOW_MODE_INTERVAL) {
+    if (
+      slowModeEnabled &&
+      lastMessageTimestamps[socket.id] &&
+      now - lastMessageTimestamps[socket.id] < SLOW_MODE_INTERVAL &&
+      !trimmed.startsWith('server init')
+    ) {
       sendPrivateSystemMessage(socket, '⏳ Slow mode is enabled. Please wait.');
       log(`🚫 Message blocked from ${user.originalName}: ${message}`);
       return;
