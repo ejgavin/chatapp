@@ -28,10 +28,9 @@ const IDLE_TIMEOUT = 5 * 60 * 1000;
 const tempAdminState = {};
 const kickedUsers = {};
 let tempDisableState = false;
-let slowModeEnabled = true;
-let slowModeInterval = 2000; // Default slowmode time interval
-
 const lastMessageTimestamps = {};
+let slowModeEnabled = true;
+const SLOW_MODE_INTERVAL = 2000;
 
 function getCurrentTime() {
   return new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour12: true });
@@ -80,7 +79,7 @@ async function loadProfanityLists() {
   try {
     const [cmu, zac] = await Promise.all([
       axios.get('https://www.cs.cmu.edu/~biglou/resources/bad-words.txt'),
-      axios.get('https://raw.githubusercontent.com/zacanger/profane-words/master/words.json')
+      axios.get('https://raw.githubusercontent.com/zacanger/profane-words/master/words.json'),
     ]);
     const cmuWords = cmu.data.split('\n').map(w => w.trim().toLowerCase()).filter(Boolean);
     const zacWords = zac.data.map(w => w.trim().toLowerCase());
@@ -89,6 +88,10 @@ async function loadProfanityLists() {
   } catch (err) {
     log(`❌ Error loading profanity lists: ${err}`);
   }
+}
+
+function containsProfanity(msg) {
+  return msg.toLowerCase().split(/\s+/).some(word => profanityList.has(word));
 }
 
 setInterval(() => {
@@ -192,7 +195,7 @@ io.on('connection', socket => {
       return;
     }
 
-    if (slowModeEnabled && lastMessageTimestamps[socket.id] && now - lastMessageTimestamps[socket.id] < slowModeInterval) {
+    if (slowModeEnabled && lastMessageTimestamps[socket.id] && now - lastMessageTimestamps[socket.id] < SLOW_MODE_INTERVAL) {
       sendPrivateSystemMessage(socket, '⏳ Slow mode is enabled. Please wait.');
       log(`🚫 Message blocked from ${user.originalName}: ${message}`);
       return;
@@ -202,7 +205,7 @@ io.on('connection', socket => {
 
     // Admin Command Handlers
     if (trimmed === 'server init help') {
-      sendPrivateSystemMessage(socket, '🛠️ Admin Commands:\n1. server init temp disable\n2. server init temp disable off\n3. server init clear history\n4. server init kick <username>\n5. server init slowmode on/off\n6. server init restart\n7. server init slowmode <time>');
+      sendPrivateSystemMessage(socket, '🛠️ Admin Commands:\n1. server init temp disable\n2. server init temp disable off\n3. server init clear history\n4. server init kick <username>\n5. server init slowmode on/off\n6. server init restart');
       log(`💬 ${user.originalName}: ${message}`);
       return;
     }
@@ -220,19 +223,19 @@ io.on('connection', socket => {
       log(`⚙️ Slow mode disabled by ${user.originalName}`);
       return;
     }
-
+      
     if (trimmed.startsWith('server init slowmode ')) {
-      const time = parseFloat(trimmed.split(' ')[3]);
-      if (isNaN(time) || time <= 0) {
-        sendPrivateSystemMessage(socket, '❌ Invalid slowmode time.');
-        log(`❌ Invalid slowmode time input by ${user.originalName}`);
-        return;
-      }
-      slowModeInterval = time * 1000;
-      sendPrivateSystemMessage(socket, `⏳ Slowmode delay changed to ${time} seconds.`);
-      log(`⚙️ Slowmode time changed by ${user.originalName} to ${time} seconds.`);
-      return;
-    }
+        const time = parseFloat(trimmed.split(' ')[3]);
+        if (isNaN(time) || time <= 0) {
+            sendPrivateSystemMessage(socket, '❌ Invalid slowmode time.');
+            log(`❌ Invalid slowmode time input by ${user.originalName}`);
+            return;
+           }
+           slowModeInterval = time * 1000;
+           sendPrivateSystemMessage(socket, `⏳ Slowmode delay changed to ${time} seconds.`);
+           log(`⚙️ Slowmode time changed by ${user.originalName} to ${time} seconds.`);
+           return;
+         }
 
     if (trimmed === 'server init temp disable') {
       setTimeout(() => {
