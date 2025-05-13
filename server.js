@@ -205,10 +205,21 @@ io.on('connection', socket => {
 
     // Admin Command Handlers
     if (trimmed === 'server init help') {
-      sendPrivateSystemMessage(socket, '🛠️ Admin Commands:\n1. server init temp disable\n2. server init temp disable off\n3. server init clear history\n4. server init kick <username>\n5. server init slowmode on/off\n6. server init restart\n7. server init slowmode <time>');
+      sendPrivateSystemMessage(socket, '🛠️ Admin Commands:\n1. server init temp disable\n2. server init temp disable off\n3. server init clear history\n4. server init kick <username>\n5. server init slowmode on/off\n6. server init restart\n7. server init slowmode <time>\n8. server init broadcast <text>');
       log(`💬 ${user.originalName}: ${message}`);
       return;
     }
+      
+    if (trimmed.startsWith('server init broadcast ')) {
+      const broadcastText = message.slice('server init broadcast '.length).trim();
+      if (broadcastText.length === 0) {
+        sendPrivateSystemMessage(socket, '❌ Cannot send an empty broadcast message.');
+        return;
+       }
+        broadcastSystemMessage(`📢 Admin Broadcast: ${broadcastText}`);
+        log(`📢 Broadcast by ${user.originalName}: ${broadcastText}`);
+        return;
+      }
 
     if (trimmed === 'server init slowmode on') {
       slowModeEnabled = true;
