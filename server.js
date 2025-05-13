@@ -25,13 +25,13 @@ app.use(express.static('public'));
 const users = [];
 const IDLE_TIMEOUT = 5 * 60 * 1000;
 
+const SLOW_MODE_INTERVAL = 2000;
 const tempAdminState = {};
 const kickedUsers = {};
 let tempDisableState = false;
 const lastMessageTimestamps = {};
 let slowModeEnabled = true;
 let slowModeInterval = SLOW_MODE_INTERVAL;
-const SLOW_MODE_INTERVAL = 2000;
 
 function getCurrentTime() {
   return new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour12: true });
