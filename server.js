@@ -129,27 +129,47 @@ io.on('connection', socket => {
     return;
   }
 
-  socket.on('new user', (username, color, avatar) => {
-    if (tempDisableState) return;
+    socket.on('new user', (username, color, avatar) => {
+      if (tempDisableState) return;
 
-    const user = {
-      socketId: socket.id,
-      originalName: username,
-      displayName: username,
-      color,
-      avatar,
-      lastActivity: Date.now(),
-      isIdle: false,
-    };
-    users.push(user);
-    io.emit('update users', users.map(u => ({
-      username: u.displayName,
-      color: u.color,
-      avatar: u.avatar
-    })));
-    log(`👤 ${username} joined`);
-    broadcastSystemMessage(`${username} has joined the chat.`);
-  });
+      // Function to generate a unique username
+      function generateUniqueUsername(baseName) {
+        let name = baseName;
+        let suffix = 2;
+        const existingNames = users.map(u => u.originalName.toLowerCase());
+
+        while (existingNames.includes(name.toLowerCase())) {
+          name = `${baseName}${suffix}`;
+          suffix++;
+        }
+
+        return name;
+      }
+
+      // Generate a unique username
+      const uniqueUsername = generateUniqueUsername(username);
+
+      const user = {
+        socketId: socket.id,
+        originalName: uniqueUsername,
+        displayName: uniqueUsername,
+        color,
+        avatar,
+        lastActivity: Date.now(),
+        isIdle: false,
+      };
+
+      users.push(user);
+
+      io.emit('update users', users.map(u => ({
+        username: u.displayName,
+        color: u.color,
+        avatar: u.avatar
+      })));
+
+      log(`👤 ${uniqueUsername} joined`);
+      broadcastSystemMessage(`${uniqueUsername} has joined the chat.`);
+    });
 
   socket.on('chat message', message => {
     const user = users.find(u => u.socketId === socket.id);
