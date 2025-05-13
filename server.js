@@ -28,9 +28,10 @@ const IDLE_TIMEOUT = 5 * 60 * 1000;
 const tempAdminState = {};
 const kickedUsers = {};
 let tempDisableState = false;
-const lastMessageTimestamps = {};
 let slowModeEnabled = true;
-const SLOW_MODE_INTERVAL = 2000;
+let slowModeInterval = 2000; // Default slowmode time interval
+
+const lastMessageTimestamps = {};
 
 function getCurrentTime() {
   return new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour12: true });
@@ -90,7 +91,6 @@ async function loadProfanityLists() {
   }
 }
 
-// Enhanced profanity check that considers all possible combinations of characters, including with spaces
 function containsProfanity(msg) {
   const normalizedMsg = msg.toLowerCase().replace(/\s+/g, ''); // Remove spaces
   return [...profanityList].some(profaneWord => normalizedMsg.includes(profaneWord));
@@ -197,7 +197,7 @@ io.on('connection', socket => {
       return;
     }
 
-    if (slowModeEnabled && lastMessageTimestamps[socket.id] && now - lastMessageTimestamps[socket.id] < SLOW_MODE_INTERVAL) {
+    if (slowModeEnabled && lastMessageTimestamps[socket.id] && now - lastMessageTimestamps[socket.id] < slowModeInterval) {
       sendPrivateSystemMessage(socket, '⏳ Slow mode is enabled. Please wait.');
       log(`🚫 Message blocked from ${user.originalName}: ${message}`);
       return;
@@ -207,7 +207,7 @@ io.on('connection', socket => {
 
     // Admin Command Handlers
     if (trimmed === 'server init help') {
-      sendPrivateSystemMessage(socket, '🛠️ Admin Commands:\n1. server init temp disable\n2. server init temp disable off\n3. server init clear history\n4. server init kick <username>\n5. server init slowmode on/off\n6. server init restart');
+      sendPrivateSystemMessage(socket, '🛠️ Admin Commands:\n1. server init temp disable\n2. server init temp disable off\n3. server init clear history\n4. server init kick <username>\n5. server init slowmode on/off\n6. server init restart\n7. server init slowmode <time>');
       log(`💬 ${user.originalName}: ${message}`);
       return;
     }
@@ -223,6 +223,19 @@ io.on('connection', socket => {
       slowModeEnabled = false;
       broadcastSystemMessage('⚙️ Admin has disabled slow mode.');
       log(`⚙️ Slow mode disabled by ${user.originalName}`);
+      return;
+    }
+
+    if (trimmed.startsWith('server init slowmode ')) {
+      const time = parseFloat(trimmed.split(' ')[3]);
+      if (isNaN(time) || time <= 0) {
+        sendPrivateSystemMessage(socket, '❌ Invalid slowmode time.');
+        log(`❌ Invalid slowmode time input by ${user.originalName}`);
+        return;
+      }
+      slowModeInterval = time * 1000;
+      sendPrivateSystemMessage(socket, `⏳ Slowmode delay changed to ${time} seconds.`);
+      log(`⚙️ Slowmode time changed by ${user.originalName} to ${time} seconds.`);
       return;
     }
 
