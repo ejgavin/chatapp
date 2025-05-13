@@ -121,6 +121,7 @@ setInterval(() => {
     })));
   }
 }, 5000);
+
 io.on('connection', socket => {
   log(`✅ New WebSocket connection from ${socket.id}`);
   socket.emit('chat history', chatHistory);
@@ -132,14 +133,20 @@ io.on('connection', socket => {
 
   socket.on('new user', (username, color, avatar) => {
     if (tempDisableState) return;
-    if (users.some(u => u.originalName === username)) {
-      sendPrivateSystemMessage(socket, `❌ Username "${username}" is already taken.`);
-      return;
+
+    // Check for duplicate usernames
+    let originalUsername = username;
+    let usernameCount = 1;
+
+    // Check if any user already has this username
+    while (users.some(u => u.originalName === username)) {
+      usernameCount++;
+      username = `${originalUsername}${usernameCount}`;
     }
 
     const user = {
       socketId: socket.id,
-      originalName: username,
+      originalName: originalUsername,
       displayName: username,
       color,
       avatar,
