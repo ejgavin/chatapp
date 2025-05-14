@@ -328,7 +328,7 @@ io.on('connection', socket => {
               clearInterval(interval);
               kickedUsers[targetUser.socketId] = true;
               sendPrivateSystemMessage(targetSocket, '❌ You were kicked by admin.');
-              broadcastSystemMessage(`${targetUser.originalName} was kicked by admin.`);
+              broadcastSystemMessage(`${targetUser.originalName} was kicked by ${user.originalName}.`);
               log(`🚫 Kicked ${targetUser.originalName} by ${user.originalName}`);
             }
           }, 1000);
