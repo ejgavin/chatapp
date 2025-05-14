@@ -39,8 +39,7 @@ let typingIndicator = document.getElementById('typing-indicator');
 if (!typingIndicator) {
   typingIndicator = document.createElement('div');
   typingIndicator.id = 'typing-indicator';
-  typingIndicator.classList.add('hidden', 'bg-orange-500', 'text-white', 'text-xs', 'rounded-full', 'px-2', 'py-1', 'absolute', 'right-0', 'top-0');
-  typingIndicator.textContent = 'Someone is typing...';
+  typingIndicator.classList.add('text-sm', 'text-gray-500', 'mt-2', 'typing-indicator', 'hidden');
   // Insert after messages
   messages.parentElement.insertBefore(typingIndicator, messages.nextSibling);
 }
@@ -168,8 +167,10 @@ socket.on('typing', data => {
   // Add the orange background to typing indicator
   if (data.isTyping) {
     typingIndicator.classList.remove('hidden');
+    typingIndicator.classList.add('bg-orange-500', 'text-white', 'px-2', 'py-1', 'rounded-full');
   } else {
     typingIndicator.classList.add('hidden');
+    typingIndicator.classList.remove('bg-orange-500', 'text-white', 'px-2', 'py-1', 'rounded-full');
   }
 
   chatType.textContent = privateRecipient ? 'Private Chat' : 'Public Chat';
