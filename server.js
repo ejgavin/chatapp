@@ -528,7 +528,7 @@ io.on('connection', socket => {
       return;
     }
 
-    log(`📩 Private from ${sender.originalName} to ${recipient.originalName}: ${data.message}`);
+    // log(`📩 Private from ${sender.originalName} to ${recipient.originalName}: ${data.message}`);
     io.to(recipient.socketId).emit('private message', {
       user: sender.displayName,
       text: data.message,
