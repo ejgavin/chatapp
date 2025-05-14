@@ -351,6 +351,7 @@ io.on('connection', socket => {
       );
       if (targetUser) {
         targetUser.adminBlocked = true;
+        delete tempAdminState[targetUser.socketId];
         sendPrivateSystemMessage(socket, `✅ ${targetUser.originalName} has been blocked from becoming admin.`);
         log(`🔒 Admin block: ${targetUser.originalName} blocked by ${user.originalName}`);
       } else {
