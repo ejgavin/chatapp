@@ -34,9 +34,16 @@ const changeUsernameInput = document.getElementById('change-username-input');
 const changeUsernameButton = document.getElementById('change-username-btn');
 const onlineUsersList = document.getElementById('online-users');
 
-const typingIndicator = document.createElement('div');
-typingIndicator.classList.add('text-sm', 'text-gray-500', 'mt-2', 'typing-indicator');
-messages.parentElement.insertBefore(typingIndicator, messages.nextSibling);
+// Typing indicator: fixed space in layout, hidden by default, styled for orange background
+let typingIndicator = document.getElementById('typing-indicator');
+if (!typingIndicator) {
+  typingIndicator = document.createElement('div');
+  typingIndicator.id = 'typing-indicator';
+  typingIndicator.classList.add('hidden', 'bg-orange-500', 'text-white', 'text-xs', 'rounded-full', 'px-2', 'py-1', 'absolute', 'right-0', 'top-0');
+  typingIndicator.textContent = 'Someone is typing...';
+  // Insert after messages
+  messages.parentElement.insertBefore(typingIndicator, messages.nextSibling);
+}
 
 // Unread messages badge
 const unreadBadge = document.getElementById('unread-badge');
@@ -154,8 +161,17 @@ socket.on('private message', msg => {
   }
 });
 
+// Typing Indicator logic with orange background and no extra space
 socket.on('typing', data => {
   typingIndicator.textContent = data.isTyping ? `${data.user} is typing...` : '';
+
+  // Add the orange background to typing indicator
+  if (data.isTyping) {
+    typingIndicator.classList.remove('hidden');
+  } else {
+    typingIndicator.classList.add('hidden');
+  }
+
   chatType.textContent = privateRecipient ? 'Private Chat' : 'Public Chat';
   currentChatWith.textContent = privateRecipient ? privateRecipient : 'No one';
 });
