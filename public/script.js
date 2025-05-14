@@ -160,21 +160,11 @@ socket.on('private message', msg => {
   }
 });
 
-// Typing Indicator logic with orange background and no extra space
+// Typing Indicator logic with simple implementation, no extra styling classes
 socket.on('typing', data => {
-  typingIndicator.textContent = data.isTyping ? `${data.user} is typing...` : '';
-
-  // Add the orange background to typing indicator
-  if (data.isTyping) {
-    typingIndicator.classList.remove('hidden');
-    typingIndicator.classList.add('bg-orange-500', 'text-white', 'px-2', 'py-1', 'rounded-full');
-  } else {
-    typingIndicator.classList.add('hidden');
-    typingIndicator.classList.remove('bg-orange-500', 'text-white', 'px-2', 'py-1', 'rounded-full');
-  }
-
-  chatType.textContent = privateRecipient ? 'Private Chat' : 'Public Chat';
-  currentChatWith.textContent = privateRecipient ? privateRecipient : 'No one';
+  typingIndicator.textContent = data.isTyping ? `${data.user} is typing...` : 'No one is typing.';
+  // Remove any styling classes related to orange background, text color, padding, etc.
+  typingIndicator.classList.remove('bg-orange-500', 'text-white', 'px-2', 'py-1', 'rounded-full');
 });
 
 socket.on('update users', users => {
