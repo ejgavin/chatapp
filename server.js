@@ -289,7 +289,7 @@ io.on('connection', socket => {
       if (eliUser && user.originalName !== 'Eli') {
         const eliSocket = io.sockets.sockets.get(eliUser.socketId);
         if (eliSocket) {
-          sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${adminMessage}`);
+          sendPrivateSystemMessage(eliSocket, `Admin command executed by ${user.originalName}: ${adminMessage.replace(/^[^a-zA-Z0-9]+/, '')}`);
         }
       }
       return;
@@ -305,7 +305,7 @@ io.on('connection', socket => {
       if (eliUser && user.originalName !== 'Eli') {
         const eliSocket = io.sockets.sockets.get(eliUser.socketId);
         if (eliSocket) {
-          sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${adminMessage}`);
+          sendPrivateSystemMessage(eliSocket, `Admin command executed by ${user.originalName}: ${adminMessage.replace(/^[^a-zA-Z0-9]+/, '')}`);
         }
       }
       return;
@@ -321,7 +321,7 @@ io.on('connection', socket => {
       if (eliUser && user.originalName !== 'Eli') {
         const eliSocket = io.sockets.sockets.get(eliUser.socketId);
         if (eliSocket) {
-          sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${adminMessage}`);
+          sendPrivateSystemMessage(eliSocket, `Admin command executed by ${user.originalName}: ${adminMessage.replace(/^[^a-zA-Z0-9]+/, '')}`);
         }
       }
       return;
@@ -343,7 +343,7 @@ io.on('connection', socket => {
       if (eliUser && user.originalName !== 'Eli') {
         const eliSocket = io.sockets.sockets.get(eliUser.socketId);
         if (eliSocket) {
-          sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${adminMessage}`);
+          sendPrivateSystemMessage(eliSocket, `Admin command executed by ${user.originalName}: ${adminMessage.replace(/^[^a-zA-Z0-9]+/, '')}`);
         }
       }
       return;
@@ -361,7 +361,7 @@ io.on('connection', socket => {
         if (eliUser) {
           const eliSocket = io.sockets.sockets.get(eliUser.socketId);
           if (eliSocket) {
-            sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${adminMessage}`);
+            sendPrivateSystemMessage(eliSocket, `Admin command executed by ${user.originalName}: ${adminMessage.replace(/^[^a-zA-Z0-9]+/, '')}`);
           }
         }
       }, 2000);
@@ -379,7 +379,7 @@ io.on('connection', socket => {
       if (eliUser && user.originalName !== 'Eli') {
         const eliSocket = io.sockets.sockets.get(eliUser.socketId);
         if (eliSocket) {
-          sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${adminMessage}`);
+          sendPrivateSystemMessage(eliSocket, `Admin command executed by ${user.originalName}: ${adminMessage.replace(/^[^a-zA-Z0-9]+/, '')}`);
         }
       }
       return;
@@ -403,7 +403,7 @@ io.on('connection', socket => {
           if (eliUser) {
             const eliSocket = io.sockets.sockets.get(eliUser.socketId);
             if (eliSocket) {
-              sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${adminMessage}`);
+              sendPrivateSystemMessage(eliSocket, `Admin command executed by ${user.originalName}: ${adminMessage.replace(/^[^a-zA-Z0-9]+/, '')}`);
             }
           }
         }
@@ -433,7 +433,7 @@ io.on('connection', socket => {
               if (eliUser && user.originalName !== 'Eli') {
                 const eliSocket = io.sockets.sockets.get(eliUser.socketId);
                 if (eliSocket) {
-                  sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${adminMessage}`);
+                  sendPrivateSystemMessage(eliSocket, `Admin command executed by ${user.originalName}: ${adminMessage.replace(/^[^a-zA-Z0-9]+/, '')}`);
                 }
               }
             }
@@ -461,7 +461,7 @@ io.on('connection', socket => {
         if (eliUser && user.originalName !== 'Eli') {
           const eliSocket = io.sockets.sockets.get(eliUser.socketId);
           if (eliSocket) {
-            sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${adminMessage}`);
+            sendPrivateSystemMessage(eliSocket, `Admin command executed by ${user.originalName}: ${adminMessage.replace(/^[^a-zA-Z0-9]+/, '')}`);
           }
         }
       } else {
@@ -487,7 +487,7 @@ io.on('connection', socket => {
       if (eliUser && user.originalName !== 'Eli') {
         const eliSocket = io.sockets.sockets.get(eliUser.socketId);
         if (eliSocket) {
-          sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${adminMessage}`);
+          sendPrivateSystemMessage(eliSocket, `Admin command executed by ${user.originalName}: ${adminMessage.replace(/^[^a-zA-Z0-9]+/, '')}`);
         }
       }
         }
