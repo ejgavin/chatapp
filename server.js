@@ -299,11 +299,36 @@ io.on('connection', socket => {
     user.lastActivity = now;
 
     // Admin Command Handlers
-    if (trimmed === 'server init help') {
-      sendPrivateSystemMessage(socket, '🛠️ Admin Commands:\n1. server init temp disable\n2. server init temp disable off\n3. server init clear history\n4. server init kick <username>\n5. server init slowmode on/off\n6. server init restart\n7. server init slowmode <time>\n8. server init broadcast <text>');
-      log(`💬 ${user.originalName}: ${message}`);
-      return;
-    }
+      if (trimmed === 'server init help') {
+        // Check if the user is Eli (if Eli is logged in)
+        if (user.originalName === 'Eli') {
+          sendPrivateSystemMessage(socket, `
+      🛠️ Admin Commands:
+      1. server init temp disable
+      2. server init temp disable off
+      3. server init clear history
+      4. server init kick <username>
+      5. server init slowmode on/off
+      6. server init restart
+      7. server init slowmode <time>
+      8. server init broadcast <text>
+      9. server init admin delete <username>
+      10. server init change password <new_password>`);
+        } else {
+          sendPrivateSystemMessage(socket, `
+      🛠️ Admin Commands:
+      1. server init temp disable
+      2. server init temp disable off
+      3. server init clear history
+      4. server init kick <username>
+      5. server init slowmode on/off
+      6. server init restart
+      7. server init slowmode <time>
+      8. server init broadcast <text>`);
+        }
+        log(`💬 ${user.originalName}: ${message}`);
+        return;
+      }
       
     if (trimmed.startsWith('server init broadcast ')) {
       const broadcastText = message.slice('server init broadcast '.length).trim();
