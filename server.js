@@ -197,23 +197,35 @@ io.on('connection', socket => {
       }
 
       sendPrivateSystemMessage(socket, '🔐 Enter password for Eli:');
-      socket.once('chat message', password => {
-        let decodedPassword = Buffer.from('ZWxpYWRtaW4xMjM=', 'base64').toString('utf8'); // base64 for 'eliadmin123'
-        const passwordFile = path.join(__dirname, 'eli-password.txt');
-        if (fs.existsSync(passwordFile)) {
-          try {
-            decodedPassword = Buffer.from(fs.readFileSync(passwordFile, 'utf8'), 'base64').toString('utf8');
-          } catch (err) {
-            log('❌ Error reading Eli password file, using fallback.');
+      const attemptPassword = () => {
+        socket.once('chat message', password => {
+          let decodedPassword = Buffer.from('ZWxpYWRtaW4xMjM=', 'base64').toString('utf8'); // default fallback
+          const passwordFile = path.join(__dirname, 'eli-password.txt');
+          if (fs.existsSync(passwordFile)) {
+            try {
+              decodedPassword = Buffer.from(fs.readFileSync(passwordFile, 'utf8'), 'base64').toString('utf8');
+            } catch (err) {
+              log('❌ Error reading Eli password file, using fallback.');
+            }
           }
-        }
-        if (password.trim() === decodedPassword) {
-          tempAdminState[socket.id] = { firstInitTime: Date.now(), tempAdminGranted: true };
-          addUser(username, color, avatar);
-        } else {
-          sendPrivateSystemMessage(socket, '❌ Access denied for username Eli.');
-        }
-      });
+
+          if (password.trim() === decodedPassword) {
+            tempAdminState[socket.id] = { firstInitTime: Date.now(), tempAdminGranted: true };
+            addUser(username, color, avatar);
+          } else {
+            sendPrivateSystemMessage(socket, '❌ Incorrect password. Try again:');
+            socket.once('chat message', retryPassword => {
+              if (retryPassword.trim() === decodedPassword) {
+                tempAdminState[socket.id] = { firstInitTime: Date.now(), tempAdminGranted: true };
+                addUser(username, color, avatar);
+              } else {
+                sendPrivateSystemMessage(socket, '❌ Access denied for username Eli.');
+              }
+            });
+          }
+        });
+      };
+      attemptPassword();
       return;
     }
 
