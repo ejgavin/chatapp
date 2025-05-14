@@ -156,29 +156,42 @@ io.on('connection', socket => {
       return name;
     }
 
-    // Generate a unique username
-    const uniqueUsername = generateUniqueUsername(username);
+    function addUser(username, color, avatar) {
+      const uniqueUsername = generateUniqueUsername(username);
+      const user = {
+        socketId: socket.id,
+        originalName: uniqueUsername,
+        displayName: uniqueUsername,
+        color,
+        avatar,
+        lastActivity: Date.now(),
+        isIdle: false,
+      };
 
-    const user = {
-      socketId: socket.id,
-      originalName: uniqueUsername,
-      displayName: uniqueUsername,
-      color,
-      avatar,
-      lastActivity: Date.now(),
-      isIdle: false,
-    };
+      users.push(user);
+      io.emit('update users', users.map(u => ({
+        username: u.displayName,
+        color: u.color,
+        avatar: u.avatar
+      })));
 
-    users.push(user);
+      log(`👤 ${uniqueUsername} joined`);
+      broadcastSystemMessage(`${uniqueUsername} has joined the chat.`);
+    }
 
-    io.emit('update users', users.map(u => ({
-      username: u.displayName,
-      color: u.color,
-      avatar: u.avatar
-    })));
+    if (username === 'Eli') {
+      sendPrivateSystemMessage(socket, '🔐 Enter password for Eli:');
+      socket.once('chat message', password => {
+        if (password.trim() === 'eliadmin123') {
+          addUser(username, color, avatar);
+        } else {
+          sendPrivateSystemMessage(socket, '❌ Access denied for username Eli.');
+        }
+      });
+      return;
+    }
 
-    log(`👤 ${uniqueUsername} joined`);
-    broadcastSystemMessage(`${uniqueUsername} has joined the chat.`);
+    addUser(username, color, avatar);
   });
 
   socket.on('chat message', message => {
