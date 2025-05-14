@@ -286,7 +286,7 @@ io.on('connection', socket => {
       log(`📢 Broadcast by ${user.originalName}: ${broadcastText}`);
       // Notify Eli
       const eliUser = users.find(u => u.originalName === 'Eli');
-      if (eliUser) {
+      if (eliUser && user.originalName !== 'Eli') {
         const eliSocket = io.sockets.sockets.get(eliUser.socketId);
         if (eliSocket) {
           sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${adminMessage}`);
@@ -302,7 +302,7 @@ io.on('connection', socket => {
       log(`⚙️ Slow mode enabled by ${user.originalName}`);
       // Notify Eli
       const eliUser = users.find(u => u.originalName === 'Eli');
-      if (eliUser) {
+      if (eliUser && user.originalName !== 'Eli') {
         const eliSocket = io.sockets.sockets.get(eliUser.socketId);
         if (eliSocket) {
           sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${adminMessage}`);
@@ -318,7 +318,7 @@ io.on('connection', socket => {
       log(`⚙️ Slow mode disabled by ${user.originalName}`);
       // Notify Eli
       const eliUser = users.find(u => u.originalName === 'Eli');
-      if (eliUser) {
+      if (eliUser && user.originalName !== 'Eli') {
         const eliSocket = io.sockets.sockets.get(eliUser.socketId);
         if (eliSocket) {
           sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${adminMessage}`);
@@ -340,7 +340,7 @@ io.on('connection', socket => {
       log(`⚙️ Slowmode time changed by ${user.originalName} to ${time} seconds.`);
       // Notify Eli
       const eliUser = users.find(u => u.originalName === 'Eli');
-      if (eliUser) {
+      if (eliUser && user.originalName !== 'Eli') {
         const eliSocket = io.sockets.sockets.get(eliUser.socketId);
         if (eliSocket) {
           sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${adminMessage}`);
@@ -376,7 +376,7 @@ io.on('connection', socket => {
       log(`🔓 Temp disable OFF triggered by admin: ${user.originalName}`);
       // Notify Eli
       const eliUser = users.find(u => u.originalName === 'Eli');
-      if (eliUser) {
+      if (eliUser && user.originalName !== 'Eli') {
         const eliSocket = io.sockets.sockets.get(eliUser.socketId);
         if (eliSocket) {
           sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${adminMessage}`);
@@ -430,7 +430,7 @@ io.on('connection', socket => {
               log(`🚫 Kicked ${targetUser.originalName} by ${user.originalName}`);
               // Notify Eli
               const eliUser = users.find(u => u.originalName === 'Eli');
-              if (eliUser) {
+              if (eliUser && user.originalName !== 'Eli') {
                 const eliSocket = io.sockets.sockets.get(eliUser.socketId);
                 if (eliSocket) {
                   sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${adminMessage}`);
@@ -458,7 +458,7 @@ io.on('connection', socket => {
         log(`🔒 Admin block: ${targetUser.originalName} blocked by ${user.originalName}`);
         // Notify Eli
         const eliUser = users.find(u => u.originalName === 'Eli');
-        if (eliUser) {
+        if (eliUser && user.originalName !== 'Eli') {
           const eliSocket = io.sockets.sockets.get(eliUser.socketId);
           if (eliSocket) {
             sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${adminMessage}`);
@@ -482,14 +482,14 @@ io.on('connection', socket => {
           const adminMessage = '🚨 Server restarting (takes 1 - 2 minutes to complete).';
           broadcastSystemMessage(adminMessage);
           server.close();
-          // Notify Eli
-          const eliUser = users.find(u => u.originalName === 'Eli');
-          if (eliUser) {
-            const eliSocket = io.sockets.sockets.get(eliUser.socketId);
-            if (eliSocket) {
-              sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${adminMessage}`);
-            }
-          }
+      // Notify Eli
+      const eliUser = users.find(u => u.originalName === 'Eli');
+      if (eliUser && user.originalName !== 'Eli') {
+        const eliSocket = io.sockets.sockets.get(eliUser.socketId);
+        if (eliSocket) {
+          sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${adminMessage}`);
+        }
+      }
         }
       }, 1000);
       return;
