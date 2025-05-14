@@ -38,6 +38,10 @@ const typingIndicator = document.createElement('div');
 typingIndicator.classList.add('text-sm', 'text-gray-500', 'mt-2', 'typing-indicator');
 messages.parentElement.insertBefore(typingIndicator, messages.nextSibling);
 
+// Unread messages badge
+const unreadBadge = document.getElementById('unread-badge');
+let unreadCount = 0;
+
 let username = localStorage.getItem('username') || '';
 let userStatus = 'active';
 let idleTimeout = null;
@@ -257,8 +261,17 @@ function displayMessage(msg) {
     <div class="ml-8">${sanitize(msg.text)}</div>
   `;
   messages.appendChild(item);
+  // Unread badge logic
+  if (!isNearBottom(messages)) {
+    unreadCount++;
+    updateUnreadBadge();
+  }
   if (wasNearBottom) {
     messages.scrollTop = messages.scrollHeight;
+  }
+  if (isNearBottom(messages)) {
+    unreadCount = 0;
+    updateUnreadBadge();
   }
 }
 
@@ -269,6 +282,10 @@ function logChatMessage(text) {
   messages.appendChild(item);
   if (wasNearBottom) {
     messages.scrollTop = messages.scrollHeight;
+  }
+  if (isNearBottom(messages)) {
+    unreadCount = 0;
+    updateUnreadBadge();
   }
 }
 
@@ -283,6 +300,10 @@ function logPrivateMessage(text) {
   messages.appendChild(item);
   if (wasNearBottom) {
     messages.scrollTop = messages.scrollHeight;
+  }
+  if (isNearBottom(messages)) {
+    unreadCount = 0;
+    updateUnreadBadge();
   }
 }
 
@@ -390,4 +411,24 @@ socket.on('you were kicked', () => {
 // 🔄 CLEAR HISTORY FUNCTIONALITY
 socket.on('clear history', () => {
   messages.innerHTML = '';
+});
+
+// --- UNREAD BADGE UTILITY ---
+function updateUnreadBadge() {
+  if (unreadBadge) {
+    if (unreadCount > 0) {
+      unreadBadge.textContent = `${unreadCount} new message${unreadCount === 1 ? '' : 's'}`;
+      unreadBadge.classList.remove('hidden');
+    } else {
+      unreadBadge.classList.add('hidden');
+    }
+  }
+}
+
+// Reset unread messages when user scrolls to bottom
+messages.addEventListener('scroll', () => {
+  if (isNearBottom(messages)) {
+    unreadCount = 0;
+    updateUnreadBadge();
+  }
 });
