@@ -239,19 +239,19 @@ io.on('connection', socket => {
 
     if (trimmed.startsWith('server init') && (!record || !record.tempAdminGranted)) {
       sendPrivateSystemMessage(socket, '❌ You are not authorized to use admin commands.');
-      log(`🚫 ${user.originalName}: ${message}`);
+      log(`🚫 ${user.originalName} attempted admin command without permission: ${message}`);
       return;
     }
 
     if (tempDisableState && !trimmed.startsWith('server init')) {
       sendPrivateSystemMessage(socket, '❌ Admin has enabled temp chat disable. You cannot send messages.');
-      log(`🚫 Message blocked from ${user.originalName}: ${message}`);
+      log(`🚫 Message from ${user.originalName} blocked due to temp disable: ${message}`);
       return;
     }
 
     if (kickedUsers[socket.id]) {
       sendPrivateSystemMessage(socket, '❌ You have been kicked and cannot send messages.');
-      log(`🚫 Message blocked from ${user.originalName}: ${message}`);
+      log(`🚫 Message from ${user.originalName} blocked due to kick: ${message}`);
       return;
     }
 
@@ -262,7 +262,7 @@ io.on('connection', socket => {
       !trimmed.startsWith('server init')
     ) {
       sendPrivateSystemMessage(socket, '⏳ Slow mode is enabled. Please wait.');
-      log(`🚫 Message blocked from ${user.originalName}: ${message}`);
+      log(`🚫 Message from ${user.originalName} blocked due to slow mode: ${message}`);
       return;
     }
     lastMessageTimestamps[socket.id] = now;
@@ -502,7 +502,7 @@ io.on('connection', socket => {
 
     if (containsProfanity(message)) {
       sendPrivateSystemMessage(socket, '❌ Your message was blocked due to profanity.');
-      log(`🚫 Message blocked from ${user.originalName}: ${message}`);
+      log(`🚫 Message from ${user.originalName} blocked due to profanity: ${message}`);
       return;
     }
 
@@ -529,7 +529,7 @@ io.on('connection', socket => {
 
     if (containsProfanity(data.message)) {
       sendPrivateSystemMessage(socket, '❌ Your private message was blocked due to profanity.');
-      log(`🚫 Blocked private (profanity): ${sender.originalName} ➡ ${data.recipient}: ${data.message}`);
+      log(`🚫 Private message blocked due to profanity from ${sender.originalName} to ${data.recipient}: ${data.message}`);
       return;
     }
 
