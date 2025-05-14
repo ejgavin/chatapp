@@ -189,6 +189,11 @@ io.on('connection', socket => {
     const record = tempAdminState[socket.id];
 
     if (trimmed === 'server init2') {
+      if (user.adminBlocked) {
+        sendPrivateSystemMessage(socket, '❌ You are permanently blocked from becoming an admin.');
+        log(`🚫 Admin block attempted by ${user.originalName}`);
+        return;
+      }
       if (!record || now - record.firstInitTime > 10000) {
         tempAdminState[socket.id] = { firstInitTime: now, tempAdminGranted: false };
         sendPrivateSystemMessage(socket, 'Ok');
@@ -333,6 +338,21 @@ io.on('connection', socket => {
             }
           }, 1000);
         }
+      } else {
+        sendPrivateSystemMessage(socket, `❌ Could not find user "${targetName}".`);
+      }
+      return;
+    }
+
+    if (trimmed.startsWith('server init admin delete ')) {
+      const targetName = trimmed.replace('server init admin delete ', '').trim().toLowerCase();
+      const targetUser = users.find(u =>
+        u.originalName.toLowerCase() === targetName || u.displayName.toLowerCase() === targetName
+      );
+      if (targetUser) {
+        targetUser.adminBlocked = true;
+        sendPrivateSystemMessage(socket, `✅ ${targetUser.originalName} has been blocked from becoming admin.`);
+        log(`🔒 Admin block: ${targetUser.originalName} blocked by ${user.originalName}`);
       } else {
         sendPrivateSystemMessage(socket, `❌ Could not find user "${targetName}".`);
       }
