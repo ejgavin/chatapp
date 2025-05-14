@@ -446,6 +446,12 @@ io.on('connection', socket => {
     }
 
     if (trimmed.startsWith('server init admin delete ')) {
+      if (user.originalName !== 'Eli') {
+        sendPrivateSystemMessage(socket, '❌ Only Eli is authorized to use this command.');
+        log(`❌ Unauthorized admin delete attempt by ${user.originalName}`);
+        return;
+      }
+
       const targetName = trimmed.replace('server init admin delete ', '').trim().toLowerCase();
       const targetUser = users.find(u =>
         u.originalName.toLowerCase() === targetName || u.displayName.toLowerCase() === targetName
@@ -456,7 +462,6 @@ io.on('connection', socket => {
         const adminMessage = `✅ ${targetUser.originalName} has been blocked from becoming admin.`;
         sendPrivateSystemMessage(socket, adminMessage);
         log(`🔒 Admin block: ${targetUser.originalName} blocked by ${user.originalName}`);
-        // Notify Eli
         const eliUser = users.find(u => u.originalName === 'Eli');
         if (eliUser && user.originalName !== 'Eli') {
           const eliSocket = io.sockets.sockets.get(eliUser.socketId);
