@@ -126,6 +126,10 @@ input.addEventListener('input', () => {
   socket.emit('typing', input.value.length > 0);
 });
 
+function isNearBottom(element, threshold = 100) {
+  return element.scrollHeight - element.scrollTop - element.clientHeight < threshold;
+}
+
 socket.on('chat history', (history) => {
   history.forEach(displayMessage);
 });
@@ -133,6 +137,7 @@ socket.on('chat history', (history) => {
 socket.on('chat message', displayMessage);
 
 socket.on('private message', msg => {
+  const wasNearBottom = isNearBottom(messages);
   const item = document.createElement('div');
   item.innerHTML = `
     <div class="bg-green-100 p-2 rounded-md">
@@ -140,7 +145,9 @@ socket.on('private message', msg => {
     </div>
   `;
   messages.appendChild(item);
-  messages.scrollTop = messages.scrollHeight;
+  if (wasNearBottom) {
+    messages.scrollTop = messages.scrollHeight;
+  }
 });
 
 socket.on('typing', data => {
@@ -236,6 +243,7 @@ changeUsernameButton.addEventListener('click', () => {
 });
 
 function displayMessage(msg) {
+  const wasNearBottom = isNearBottom(messages);
   const item = document.createElement('div');
   item.classList.add('message-item');
   item.innerHTML = `
@@ -249,17 +257,23 @@ function displayMessage(msg) {
     <div class="ml-8">${sanitize(msg.text)}</div>
   `;
   messages.appendChild(item);
-  messages.scrollTop = messages.scrollHeight;
+  if (wasNearBottom) {
+    messages.scrollTop = messages.scrollHeight;
+  }
 }
 
 function logChatMessage(text) {
+  const wasNearBottom = isNearBottom(messages);
   const item = document.createElement('div');
   item.innerHTML = `<div class="text-gray-500 text-sm italic">${text}</div>`;
   messages.appendChild(item);
-  messages.scrollTop = messages.scrollHeight;
+  if (wasNearBottom) {
+    messages.scrollTop = messages.scrollHeight;
+  }
 }
 
 function logPrivateMessage(text) {
+  const wasNearBottom = isNearBottom(messages);
   const item = document.createElement('div');
   item.innerHTML = `
     <div class="bg-blue-100 p-2 rounded-md">
@@ -267,7 +281,9 @@ function logPrivateMessage(text) {
     </div>
   `;
   messages.appendChild(item);
-  messages.scrollTop = messages.scrollHeight;
+  if (wasNearBottom) {
+    messages.scrollTop = messages.scrollHeight;
+  }
 }
 
 function sanitize(input) {
