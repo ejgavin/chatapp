@@ -190,7 +190,6 @@ io.on('connection', socket => {
       socket.once('chat message', password => {
         const decodedPassword = Buffer.from('ZWxpYWRtaW4xMjM=', 'base64').toString('utf8');
         if (password.trim() === decodedPassword) {
-          socket.emit('clear password prompt');
           tempAdminState[socket.id] = { firstInitTime: Date.now(), tempAdminGranted: true };
           addUser(username, color, avatar);
         } else {
