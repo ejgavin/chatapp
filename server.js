@@ -101,7 +101,7 @@ async function loadProfanityLists() {
 }
 
 function containsProfanity(msg) {
-  return msg.toLowerCase().split(/\s+/).some(word => profanityList.has(word));
+  return Array.from(profanityList).some(p => msg.toLowerCase().includes(p));
 }
 
 setInterval(() => {
@@ -144,6 +144,10 @@ io.on('connection', socket => {
 
     // Function to generate a unique username
     function generateUniqueUsername(baseName) {
+      // Block the name "Eli" from being duplicated at all
+      if (baseName === 'Eli') {
+        return 'Eli';
+      }
       let name = baseName;
       let suffix = 2;
       const existingNames = users.map(u => u.originalName.toLowerCase());
@@ -185,7 +189,13 @@ io.on('connection', socket => {
       broadcastSystemMessage(`${uniqueUsername} has joined the chat.`);
     }
 
+    // Block the name "Eli" from being duplicated at all
     if (username === 'Eli') {
+      if (users.some(u => u.originalName === 'Eli')) {
+        sendPrivateSystemMessage(socket, '❌ The username "Eli" is already in use.');
+        return;
+      }
+
       sendPrivateSystemMessage(socket, '🔐 Enter password for Eli:');
       socket.once('chat message', password => {
         const decodedPassword = Buffer.from('ZWxpYWRtaW4xMjM=', 'base64').toString('utf8');
