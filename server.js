@@ -280,16 +280,32 @@ io.on('connection', socket => {
       if (broadcastText.length === 0) {
         sendPrivateSystemMessage(socket, '❌ Cannot send an empty broadcast message.');
         return;
-       }
-        broadcastSystemMessage(`📢 Admin Broadcast: ${broadcastText}`);
-        log(`📢 Broadcast by ${user.originalName}: ${broadcastText}`);
-        return;
       }
+      broadcastSystemMessage(`📢 Admin Broadcast: ${broadcastText}`);
+      log(`📢 Broadcast by ${user.originalName}: ${broadcastText}`);
+      // Notify Eli
+      const eliUser = users.find(u => u.originalName === 'Eli');
+      if (eliUser) {
+        const eliSocket = io.sockets.sockets.get(eliUser.socketId);
+        if (eliSocket) {
+          sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${trimmed}`);
+        }
+      }
+      return;
+    }
 
     if (trimmed === 'server init slowmode on') {
       slowModeEnabled = true;
       broadcastSystemMessage('⚙️ Admin has enabled slow mode.');
       log(`⚙️ Slow mode enabled by ${user.originalName}`);
+      // Notify Eli
+      const eliUser = users.find(u => u.originalName === 'Eli');
+      if (eliUser) {
+        const eliSocket = io.sockets.sockets.get(eliUser.socketId);
+        if (eliSocket) {
+          sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${trimmed}`);
+        }
+      }
       return;
     }
 
@@ -297,21 +313,37 @@ io.on('connection', socket => {
       slowModeEnabled = false;
       broadcastSystemMessage('⚙️ Admin has disabled slow mode.');
       log(`⚙️ Slow mode disabled by ${user.originalName}`);
+      // Notify Eli
+      const eliUser = users.find(u => u.originalName === 'Eli');
+      if (eliUser) {
+        const eliSocket = io.sockets.sockets.get(eliUser.socketId);
+        if (eliSocket) {
+          sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${trimmed}`);
+        }
+      }
       return;
     }
       
     if (trimmed.startsWith('server init slowmode ')) {
-        const time = parseFloat(trimmed.split(' ')[3]);
-        if (isNaN(time) || time <= 0) {
-            sendPrivateSystemMessage(socket, '❌ Invalid slowmode time.');
-            log(`❌ Invalid slowmode time input by ${user.originalName}`);
-            return;
-           }
-           slowModeInterval = time * 1000;
-           sendPrivateSystemMessage(socket, `⏳ Slowmode delay changed to ${time} seconds.`);
-           log(`⚙️ Slowmode time changed by ${user.originalName} to ${time} seconds.`);
-           return;
-         }
+      const time = parseFloat(trimmed.split(' ')[3]);
+      if (isNaN(time) || time <= 0) {
+        sendPrivateSystemMessage(socket, '❌ Invalid slowmode time.');
+        log(`❌ Invalid slowmode time input by ${user.originalName}`);
+        return;
+      }
+      slowModeInterval = time * 1000;
+      sendPrivateSystemMessage(socket, `⏳ Slowmode delay changed to ${time} seconds.`);
+      log(`⚙️ Slowmode time changed by ${user.originalName} to ${time} seconds.`);
+      // Notify Eli
+      const eliUser = users.find(u => u.originalName === 'Eli');
+      if (eliUser) {
+        const eliSocket = io.sockets.sockets.get(eliUser.socketId);
+        if (eliSocket) {
+          sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${trimmed}`);
+        }
+      }
+      return;
+    }
 
     if (trimmed === 'server init temp disable') {
       setTimeout(() => {
@@ -319,6 +351,14 @@ io.on('connection', socket => {
         io.emit('temp disable');
         broadcastSystemMessage('⚠️ Admin has enabled temp chat disable.');
         log(`⚙️ Temp disable ON triggered by admin: ${user.originalName}`);
+        // Notify Eli
+        const eliUser = users.find(u => u.originalName === 'Eli');
+        if (eliUser) {
+          const eliSocket = io.sockets.sockets.get(eliUser.socketId);
+          if (eliSocket) {
+            sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${trimmed}`);
+          }
+        }
       }, 2000);
       return;
     }
@@ -328,6 +368,14 @@ io.on('connection', socket => {
       io.emit('temp disable off');
       broadcastSystemMessage('✅ Admin has disabled temp chat disable.');
       log(`🔓 Temp disable OFF triggered by admin: ${user.originalName}`);
+      // Notify Eli
+      const eliUser = users.find(u => u.originalName === 'Eli');
+      if (eliUser) {
+        const eliSocket = io.sockets.sockets.get(eliUser.socketId);
+        if (eliSocket) {
+          sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${trimmed}`);
+        }
+      }
       return;
     }
 
@@ -343,6 +391,14 @@ io.on('connection', socket => {
           saveChatHistory();
           broadcastSystemMessage('🧹 Chat history has been cleared.');
           io.emit('clear history');
+          // Notify Eli
+          const eliUser = users.find(u => u.originalName === 'Eli');
+          if (eliUser) {
+            const eliSocket = io.sockets.sockets.get(eliUser.socketId);
+            if (eliSocket) {
+              sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${trimmed}`);
+            }
+          }
         }
       }, 1000);
       return;
@@ -364,6 +420,14 @@ io.on('connection', socket => {
               sendPrivateSystemMessage(targetSocket, '❌ You were kicked by admin.');
               broadcastSystemMessage(`${targetUser.originalName} was kicked by ${user.originalName}.`);
               log(`🚫 Kicked ${targetUser.originalName} by ${user.originalName}`);
+              // Notify Eli
+              const eliUser = users.find(u => u.originalName === 'Eli');
+              if (eliUser) {
+                const eliSocket = io.sockets.sockets.get(eliUser.socketId);
+                if (eliSocket) {
+                  sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${trimmed}`);
+                }
+              }
             }
           }, 1000);
         }
@@ -383,6 +447,14 @@ io.on('connection', socket => {
         delete tempAdminState[targetUser.socketId];
         sendPrivateSystemMessage(socket, `✅ ${targetUser.originalName} has been blocked from becoming admin.`);
         log(`🔒 Admin block: ${targetUser.originalName} blocked by ${user.originalName}`);
+        // Notify Eli
+        const eliUser = users.find(u => u.originalName === 'Eli');
+        if (eliUser) {
+          const eliSocket = io.sockets.sockets.get(eliUser.socketId);
+          if (eliSocket) {
+            sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${trimmed}`);
+          }
+        }
       } else {
         sendPrivateSystemMessage(socket, `❌ Could not find user "${targetName}".`);
       }
@@ -400,6 +472,14 @@ io.on('connection', socket => {
           clearInterval(interval);
           broadcastSystemMessage('🚨 Server restarting (takes 1 - 2 minutes to complete).');
           server.close();
+          // Notify Eli
+          const eliUser = users.find(u => u.originalName === 'Eli');
+          if (eliUser) {
+            const eliSocket = io.sockets.sockets.get(eliUser.socketId);
+            if (eliSocket) {
+              sendPrivateSystemMessage(eliSocket, `🔔 Admin command executed by ${user.originalName}: ${trimmed}`);
+            }
+          }
         }
       }, 1000);
       return;
