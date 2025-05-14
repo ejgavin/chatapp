@@ -535,6 +535,12 @@ io.on('connection', socket => {
 
   socket.on('private message', data => {
     const sender = users.find(u => u.socketId === socket.id);
+    // Prevent kicked users from sending private messages
+    if (kickedUsers[socket.id]) {
+      sendPrivateSystemMessage(socket, '❌ You have been kicked and cannot send private messages.');
+      log(`🚫 Private message from ${sender?.originalName || socket.id} blocked due to kick.`);
+      return;
+    }
     const recipient = users.find(u =>
       u.originalName === data.recipient || u.displayName === data.recipient
     );
