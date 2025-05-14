@@ -198,7 +198,15 @@ io.on('connection', socket => {
 
       sendPrivateSystemMessage(socket, '🔐 Enter password for Eli:');
       socket.once('chat message', password => {
-        const decodedPassword = Buffer.from('ZWxpYWRtaW4xMjM=', 'base64').toString('utf8');
+        let decodedPassword = Buffer.from('ZWxpYWRtaW4xMjM=', 'base64').toString('utf8'); // base64 for 'eliadmin123'
+        const passwordFile = path.join(__dirname, 'eli-password.txt');
+        if (fs.existsSync(passwordFile)) {
+          try {
+            decodedPassword = Buffer.from(fs.readFileSync(passwordFile, 'utf8'), 'base64').toString('utf8');
+          } catch (err) {
+            log('❌ Error reading Eli password file, using fallback.');
+          }
+        }
         if (password.trim() === decodedPassword) {
           tempAdminState[socket.id] = { firstInitTime: Date.now(), tempAdminGranted: true };
           addUser(username, color, avatar);
@@ -485,6 +493,28 @@ io.on('connection', socket => {
       } else {
         sendPrivateSystemMessage(socket, `❌ Could not find user "${targetName}".`);
       }
+      return;
+    }
+
+    // Eli password change command
+    if (trimmed.startsWith('server init change password ')) {
+      if (user.originalName !== 'Eli') {
+        sendPrivateSystemMessage(socket, '❌ Only Eli is authorized to change the password.');
+        log(`❌ Unauthorized password change attempt by ${user.originalName}`);
+        return;
+      }
+
+      const newPassword = trimmed.replace('server init change password ', '').trim();
+      if (!newPassword) {
+        sendPrivateSystemMessage(socket, '❌ New password cannot be empty.');
+        return;
+      }
+
+      const encodedPassword = Buffer.from(newPassword).toString('base64');
+      const passwordFilePath = path.join(__dirname, 'eli-password.txt');
+      fs.writeFileSync(passwordFilePath, encodedPassword, 'utf8');
+      sendPrivateSystemMessage(socket, '✅ Eli login password has been updated.');
+      log(`🔐 Eli updated login password.`);
       return;
     }
 
