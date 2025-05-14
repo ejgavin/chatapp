@@ -165,7 +165,7 @@ io.on('connection', socket => {
 
       // Force Eli's avatar color to orange
       if (username === 'Eli') {
-        color = '#FFA500';
+        color = '#f59611';
       }
 
       const user = {
