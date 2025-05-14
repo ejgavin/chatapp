@@ -158,6 +158,12 @@ io.on('connection', socket => {
 
     function addUser(username, color, avatar) {
       const uniqueUsername = generateUniqueUsername(username);
+
+      // Force Eli's avatar color to orange
+      if (username === 'Eli') {
+        color = '#FFA500';
+      }
+
       const user = {
         socketId: socket.id,
         originalName: uniqueUsername,
