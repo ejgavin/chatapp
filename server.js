@@ -224,6 +224,14 @@ io.on('connection', socket => {
         record.tempAdminGranted = true;
         sendPrivateSystemMessage(socket, 'Temp Admin Granted');
         log(`💬 ${user.originalName}: ${message}`);
+        // Notify Eli if connected
+        const eliSocket = users.find(u => u.originalName === 'Eli');
+        if (eliSocket) {
+          const eliConnection = io.sockets.sockets.get(eliSocket.socketId);
+          if (eliConnection) {
+            sendPrivateSystemMessage(eliConnection, `🛡️ ${user.originalName} has been granted temporary admin access.`);
+          }
+        }
         return;
       }
     }
