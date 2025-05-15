@@ -370,6 +370,40 @@ io.on('connection', socket => {
         activePoll = null;
         return;
       }
+      
+      if (trimmed.startsWith('server init pin ')) {
+        const pinMessage = message.slice('server init pin '.length).trim();
+
+        if (!pinMessage) {
+          sendPrivateSystemMessage(socket, '❌ Cannot pin an empty message.');
+          return;
+        }
+
+        const pinAnnouncement = {
+          user: '📌 Pinned Message',
+          text: pinMessage,
+          color: '#f39c12',
+          avatar: '',
+          time: getCurrentTime(),
+        };
+
+        io.emit('chat message', pinAnnouncement);
+        chatHistory.push(pinAnnouncement);
+        saveChatHistory();
+
+        log(`📌 Message pinned by ${user.originalName}: ${pinMessage}`);
+
+        // Notify Eli
+        const eliUser = users.find(u => u.originalName === 'Eli');
+        if (eliUser && user.originalName !== 'Eli') {
+          const eliSocket = io.sockets.sockets.get(eliUser.socketId);
+          if (eliSocket) {
+            sendPrivateSystemMessage(eliSocket, `Admin command executed by ${user.originalName}: pinned a message.`);
+          }
+        }
+
+        return;
+      }
 
     if (
       slowModeEnabled &&
