@@ -407,6 +407,24 @@ io.on('connection', socket => {
 
         return;
       }
+      
+      if (trimmed === 'server init pinoff') {
+        // Notify all clients to hide the pinned message
+        io.emit('pinned message', '');
+
+        log(`📌 Pinned message cleared by ${user.originalName}`);
+
+        // Optionally notify Eli
+        const eliUser = users.find(u => u.originalName === 'Eli');
+        if (eliUser && user.originalName !== 'Eli') {
+          const eliSocket = io.sockets.sockets.get(eliUser.socketId);
+          if (eliSocket) {
+            sendPrivateSystemMessage(eliSocket, `Admin command executed by ${user.originalName}: cleared pinned message.`);
+          }
+        }
+
+        return;
+      }
 
     if (
       slowModeEnabled &&

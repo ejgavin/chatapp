@@ -164,8 +164,13 @@ socket.on('private message', msg => {
 });
 
 socket.on('pinned message', (msg) => {
-  pinnedText.textContent = msg;
-  pinnedContainer.classList.remove('hidden');
+  if (msg.trim() === '') {
+    pinnedContainer.classList.add('hidden');
+    pinnedText.textContent = '';
+  } else {
+    pinnedText.textContent = msg;
+    pinnedContainer.classList.remove('hidden');
+  }
 });
 
 // Typing Indicator logic with simple implementation, no extra styling classes
