@@ -11,6 +11,7 @@ const io = new Server(server);
 
 const CHAT_HISTORY_FILE = path.join(__dirname, 'chat-history.json');
 let chatHistory = [];
+let activePoll = null;
 
 if (fs.existsSync(CHAT_HISTORY_FILE)) {
   try {
@@ -276,6 +277,99 @@ io.on('connection', socket => {
       log(`🚫 Message from ${user.originalName} blocked due to kick: ${message}`);
       return;
     }
+      
+      // === START POLL ===
+      if (trimmed.startsWith('server init poll ')) {
+        if (activePoll) {
+          sendPrivateSystemMessage(socket, '❌ A poll is already running.');
+          return;
+        }
+
+        const pollArgs = trimmed.replace('server init poll ', '').trim().split(' ');
+        if (pollArgs.length < 2) {
+          sendPrivateSystemMessage(socket, '❌ Please provide two options: server init poll [option1] [option2]');
+          return;
+        }
+
+        const [option1, option2] = pollArgs;
+
+        activePoll = {
+          question: `🗳️ New Poll:`,
+          options: [option1, option2],
+          votes: {}, // key: socketId, value: 0 or 1
+        };
+
+        io.emit('chat message', {
+          user: '🗳️ System',
+          text: `Poll started!\nOption 1: ${option1}\nOption 2: ${option2}\nVote using: !vote 1 or !vote 2`,
+          color: '#3498db',
+          avatar: '',
+          time: getCurrentTime(),
+        });
+
+        return;
+      }
+
+      // === VOTING ===
+      if (trimmed.startsWith('!vote')) {
+        if (!activePoll) {
+          sendPrivateSystemMessage(socket, '❌ No active poll.');
+          return;
+        }
+
+        const voteNum = parseInt(trimmed.replace('!vote', '').trim(), 10);
+        if (![1, 2].includes(voteNum)) {
+          sendPrivateSystemMessage(socket, '❌ Invalid vote. Use !vote 1 or !vote 2.');
+          return;
+        }
+
+        activePoll.votes[socket.id] = voteNum - 1;
+
+        // Count current results
+        const counts = [0, 0];
+        for (const v of Object.values(activePoll.votes)) {
+          counts[v]++;
+        }
+
+        io.emit('chat message', {
+          user: '🗳️ Poll Update',
+          text: `Current results:\n${activePoll.options[0]}: ${counts[0]} votes\n${activePoll.options[1]}: ${counts[1]} votes`,
+          color: '#2ecc71',
+          avatar: '',
+          time: getCurrentTime(),
+        });
+
+        return;
+      }
+
+      // === END POLL ===
+      if (trimmed === 'server init endpoll') {
+        if (user.originalName !== 'Eli') {
+          sendPrivateSystemMessage(socket, '❌ Only Eli can end the poll.');
+          return;
+        }
+
+        if (!activePoll) {
+          sendPrivateSystemMessage(socket, '❌ No poll is active.');
+          return;
+        }
+
+        const counts = [0, 0];
+        for (const v of Object.values(activePoll.votes)) {
+          counts[v]++;
+        }
+
+        io.emit('chat message', {
+          user: '🗳️ Poll Ended',
+          text: `Final results:\n${activePoll.options[0]}: ${counts[0]} votes\n${activePoll.options[1]}: ${counts[1]} votes`,
+          color: '#e74c3c',
+          avatar: '',
+          time: getCurrentTime(),
+        });
+
+        activePoll = null;
+        return;
+      }
 
     if (
       slowModeEnabled &&
@@ -653,7 +747,7 @@ io.on('connection', socket => {
         }
         return;
       }
-
+      
     if (containsProfanity(message)) {
       sendPrivateSystemMessage(socket, '❌ Your message was blocked due to profanity.');
       log(`🚫 Message from ${user.originalName} blocked due to profanity: ${message}`);
