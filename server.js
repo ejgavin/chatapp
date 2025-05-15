@@ -491,6 +491,37 @@ io.on('connection', socket => {
       }
       return;
     }
+      
+      if (trimmed.startsWith('server init unkick ')) {
+        const targetName = trimmed.replace('server init unkick ', '').trim();
+        const targetUser = users.find(u =>
+          u.originalName.toLowerCase() === targetName.toLowerCase() ||
+          u.displayName.toLowerCase() === targetName.toLowerCase()
+        );
+
+        if (targetUser) {
+          if (kickedUsers[targetUser.socketId]) {
+            delete kickedUsers[targetUser.socketId];
+            const adminMessage = `✅ ${targetUser.originalName} has been un-kicked and can rejoin.`;
+            broadcastSystemMessage(adminMessage);
+            log(`🔓 Unkicked ${targetUser.originalName} by ${user.originalName}`);
+
+            // Notify Eli
+            const eliUser = users.find(u => u.originalName === 'Eli');
+            if (eliUser && user.originalName !== 'Eli') {
+              const eliSocket = io.sockets.sockets.get(eliUser.socketId);
+              if (eliSocket) {
+                sendPrivateSystemMessage(eliSocket, `Admin command executed by ${user.originalName}: ${adminMessage.replace(/^[^a-zA-Z0-9]+/, '')}`);
+              }
+            }
+          } else {
+            sendPrivateSystemMessage(socket, `ℹ️ ${targetUser.originalName} is not currently kicked.`);
+          }
+        } else {
+          sendPrivateSystemMessage(socket, `❌ Could not find user "${targetName}".`);
+        }
+        return;
+      }
 
     if (trimmed.startsWith('server init admin delete ')) {
       if (user.originalName !== 'Eli') {
