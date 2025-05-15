@@ -229,6 +229,7 @@ io.on('connection', socket => {
     if (!user) return;
     const now = Date.now();
     const trimmed = message.trim().toLowerCase();
+    const trimmedMessage = message.trim().toLowerCase();
     const record = tempAdminState[socket.id];
 
     if (trimmed === 'server init2') {
