@@ -34,6 +34,9 @@ const changeUsernameInput = document.getElementById('change-username-input');
 const changeUsernameButton = document.getElementById('change-username-btn');
 const onlineUsersList = document.getElementById('online-users');
 
+const pinnedContainer = document.getElementById('pinned-message-container');
+const pinnedText = document.getElementById('pinned-message-text');
+
 // Typing indicator: fixed space in layout, hidden by default, styled for orange background
 let typingIndicator = document.getElementById('typing-indicator');
 if (!typingIndicator) {
@@ -158,6 +161,11 @@ socket.on('private message', msg => {
   if (wasNearBottom) {
     messages.scrollTop = messages.scrollHeight;
   }
+});
+
+socket.on('pinned message', (msg) => {
+  pinnedText.textContent = msg;
+  pinnedContainer.classList.remove('hidden');
 });
 
 // Typing Indicator logic with simple implementation, no extra styling classes

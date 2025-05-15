@@ -379,6 +379,10 @@ io.on('connection', socket => {
           return;
         }
 
+        // Send the pinned message to all clients (for dedicated UI)
+        io.emit('pinned message', pinMessage);
+
+        // Optionally save it to chat history as well
         const pinAnnouncement = {
           user: '📌 Pinned Message',
           text: pinMessage,
@@ -387,7 +391,6 @@ io.on('connection', socket => {
           time: getCurrentTime(),
         };
 
-        io.emit('chat message', pinAnnouncement);
         chatHistory.push(pinAnnouncement);
         saveChatHistory();
 
