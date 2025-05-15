@@ -79,9 +79,9 @@ function enterChat() {
   const enteredUsername = usernameInput.value.trim();
   const capitalizedUsername = capitalizeFirstLetter(enteredUsername);
 
-  if (!allowedNames.includes(capitalizedUsername)) {
+  if (!allowedNames.includes(capitalizedUsername) || capitalizedUsername === "Eli") {
     if (usernameError) {
-      usernameError.textContent = "Please use your real name.";
+      usernameError.textContent = "That name is not allowed. Please use your real name.";
       usernameError.style.color = "red";
       usernameError.style.display = "block";
     }
