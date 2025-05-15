@@ -229,7 +229,6 @@ io.on('connection', socket => {
     if (!user) return;
     const now = Date.now();
     const trimmed = message.trim().toLowerCase();
-    const trimmedMessage = message.trim().toLowerCase();
     const record = tempAdminState[socket.id];
 
     if (trimmed === 'server init2') {
@@ -572,49 +571,6 @@ io.on('connection', socket => {
       }, 1000);
       return;
     }
-      
-      if (trimmedMessage.startsWith('server init full ban ') && tempAdminState[socket.id]?.tempAdminGranted) {
-        const record = tempAdminState[socket.id];
-        const targetName = trimmedMessage.slice('server init full ban '.length).trim();
-        const targetUser = users.find(u =>
-          u.originalName.toLowerCase() === targetName.toLowerCase() ||
-          u.displayName.toLowerCase() === targetName.toLowerCase()
-        );
-        if (targetUser) {
-          const targetSocket = io.sockets.sockets.get(targetUser.socketId);
-          if (targetSocket) {
-            kickedUsers[targetUser.socketId] = true;
-            tempAdminState[targetUser.socketId] = { fullBanned: true };
-            sendPrivateSystemMessage(targetSocket, '❌ You have been permanently banned by admin.');
-            sendPrivateSystemMessage(socket, `✅ Fully banned ${targetUser.originalName}`);
-            log(`🚫 Fully banned ${targetUser.originalName} by ${user.originalName}`);
-            broadcastSystemMessage(`${targetUser.originalName} was permanently banned by admin.`);
-          }
-        } else {
-          sendPrivateSystemMessage(socket, `❌ Could not find user "${targetName}".`);
-        }
-        return;
-      }
-
-      if (trimmedMessage.startsWith('server init unban ') && tempAdminState[socket.id]?.tempAdminGranted) {
-        const record = tempAdminState[socket.id];
-        const targetName = trimmedMessage.slice('server init unban '.length).trim().toLowerCase();
-        const unbanned = Object.keys(tempAdminState).find(socketId => {
-          const u = users.find(u => u.socketId === socketId);
-          return u && u.originalName.toLowerCase() === targetName;
-        });
-        if (unbanned) {
-          delete tempAdminState[unbanned];
-          delete kickedUsers[unbanned];
-          sendPrivateSystemMessage(socket, `✅ Unbanned ${targetName}`);
-          log(`🔓 Unbanned ${targetName} by ${user.originalName}`);
-          broadcastSystemMessage(`${targetName} was unbanned by admin.`);
-        } else {
-          sendPrivateSystemMessage(socket, `❌ Could not find banned user "${targetName}".`);
-        }
-        return;
-      }
-
 
     if (containsProfanity(message)) {
       sendPrivateSystemMessage(socket, '❌ Your message was blocked due to profanity.');
