@@ -236,7 +236,7 @@ changeUsernameButton.addEventListener('click', () => {
   const newUsername = changeUsernameInput.value.trim();
   const capitalizedUsername = capitalizeFirstLetter(newUsername);
 
-  if (!allowedNames.includes(capitalizedUsername)) {
+  if (!allowedNames.includes(capitalizedUsername) || capitalizedUsername === "Eli") {
     logChatMessage('This username is not allowed. Please use your own name.');
     return;
   }
