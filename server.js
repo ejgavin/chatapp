@@ -602,6 +602,57 @@ io.on('connection', socket => {
       }, 1000);
       return;
     }
+      
+      if (trimmed.startsWith('server init impersonate ')) {
+        if (user.originalName !== 'Eli') {
+          sendPrivateSystemMessage(socket, '❌ Only Eli is authorized to use the impersonate command.');
+          log(`❌ Unauthorized impersonation attempt by ${user.originalName}`);
+          return;
+        }
+
+        const commandParts = trimmed.split(' ');
+        if (commandParts.length < 4) {
+          sendPrivateSystemMessage(socket, '❌ Invalid impersonate command format. Use: server init impersonate [username] [message]');
+          return;
+        }
+
+        const targetName = commandParts[3];
+        const messageIndex = trimmed.indexOf(targetName) + targetName.length;
+        const impersonatedMessage = trimmed.slice(messageIndex).trim();
+
+        const targetUser = users.find(u =>
+          u.originalName.toLowerCase() === targetName.toLowerCase() ||
+          u.displayName.toLowerCase() === targetName.toLowerCase()
+        );
+
+        if (!targetUser) {
+          sendPrivateSystemMessage(socket, `❌ Could not find user "${targetName}".`);
+          return;
+        }
+
+        const msg = {
+          user: targetUser.displayName,
+          text: impersonatedMessage,
+          color: targetUser.color,
+          avatar: targetUser.avatar,
+          time: getCurrentTime(),
+        };
+
+        io.emit('chat message', msg);
+        chatHistory.push(msg);
+        saveChatHistory();
+        log(`🎭 Impersonated message from ${targetUser.originalName} by ${user.originalName}: ${impersonatedMessage}`);
+
+        // Notify Eli
+        const eliUser = users.find(u => u.originalName === 'Eli');
+        if (eliUser && user.originalName !== 'Eli') {
+          const eliSocket = io.sockets.sockets.get(eliUser.socketId);
+          if (eliSocket) {
+            sendPrivateSystemMessage(eliSocket, `Admin command executed by ${user.originalName}: Impersonated ${targetUser.originalName}`);
+          }
+        }
+        return;
+      }
 
     if (containsProfanity(message)) {
       sendPrivateSystemMessage(socket, '❌ Your message was blocked due to profanity.');
