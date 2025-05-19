@@ -31,7 +31,8 @@ const tempAdminState = {};
 const kickedUsers = {};
 let tempDisableState = false;
 const lastMessageTimestamps = {};
-let slowModeEnabled = true;
+let slowModeEnabled = false;
+let profanityFilterEnabled = false;
 let slowModeInterval = SLOW_MODE_INTERVAL;
 
 function getCurrentTime() {
@@ -833,7 +834,29 @@ io.on('connection', socket => {
         return;
       }
       
-    if (containsProfanity(message)) {
+      if (trimmed === 'server init filter on') {
+        if (user.originalName !== 'Eli') {
+          sendPrivateSystemMessage(socket, '❌ Only Eli can enable the profanity filter.');
+          return;
+        }
+        profanityFilterEnabled = true;
+        broadcastSystemMessage('🛡️ Profanity filter has been ENABLED.');
+        log(`🛡️ Profanity filter enabled by ${user.originalName}`);
+        return;
+      }
+
+      if (trimmed === 'server init filter off') {
+        if (user.originalName !== 'Eli') {
+          sendPrivateSystemMessage(socket, '❌ Only Eli can disable the profanity filter.');
+          return;
+        }
+        profanityFilterEnabled = false;
+        broadcastSystemMessage('🛡️ Profanity filter has been DISABLED.');
+        log(`🛡️ Profanity filter disabled by ${user.originalName}`);
+        return;
+      }
+
+    if (profanityFilterEnabled && containsProfanity(message)) {
       sendPrivateSystemMessage(socket, '❌ Your message was blocked due to profanity.');
       log(`🚫 Message from ${user.originalName} blocked due to profanity: ${message}`);
       return;
@@ -866,7 +889,7 @@ io.on('connection', socket => {
     );
     if (!sender || !recipient) return;
 
-    if (containsProfanity(data.message)) {
+    if (profanityFilterEnabled && containsProfanity(data.message)) {
       sendPrivateSystemMessage(socket, '❌ Your private message was blocked due to profanity.');
       log(`🚫 Private message blocked due to profanity from ${sender.originalName} to ${data.recipient}: ${data.message}`);
       return;
