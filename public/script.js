@@ -99,6 +99,7 @@ function enterChat() {
     socket.emit('new user', username, color, avatar);
     usernameScreen.classList.add('hidden');
     chatUI.classList.remove('hidden');
+    messages.scrollTop = messages.scrollHeight;
     usernameError.textContent = '';
     startIdleDetection();
     startStatusLogging();
@@ -145,6 +146,7 @@ function isNearBottom(element, threshold = 100) {
 
 socket.on('chat history', (history) => {
   history.forEach(displayMessage);
+  messages.scrollTop = messages.scrollHeight;
 });
 
 socket.on('chat message', displayMessage);
