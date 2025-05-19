@@ -454,3 +454,4 @@ messages.addEventListener('scroll', () => {
     updateUnreadBadge();
   }
 });
+ 
