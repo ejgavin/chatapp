@@ -80,7 +80,7 @@ function getRandomColor() {
 
 function enterChat() {
   const enteredUsername = usernameInput.value.trim();
-  const capitalizedUsername = capitalizeFirstLetter(enteredUsername);
+  const capitalizedUsername = enteredUsername === 'Eli' ? 'Eli' : enteredUsername;
 
   if (!capitalizedUsername) {
     if (usernameError) {
