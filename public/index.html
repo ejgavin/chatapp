@@ -17,6 +17,7 @@
     <button id="enter-chat-btn" class="bg-blue-500 text-white px-6 py-2 rounded">Enter Chat</button>
     <div id="error-message" class="text-red-500 mt-2 hidden">Please use your own name or request a nickname to be added.</div>
     <p id="username-error" class="text-red-500 text-sm mt-1 hidden">Please use your real name.</p>
+    <button id="aristotle-bypass-btn-login" class="text-sm text-purple-600 underline mt-4">Aristotle Bypass</button>
   </div>
 
   <!-- Main Chat UI -->
@@ -131,8 +132,36 @@
   <script src="script.js"></script>
   <script>
     document.getElementById("aristotle-bypass-btn").addEventListener("click", () => {
-      const iframe = document.getElementById("iframe");
-      const url = iframe?.src || "https://example.com"; // fallback if iframe doesn't exist
+      const url = "https://vulnerable-albertine-stuff21-3c47da18hithisiskindarandomikye.koyeb.app/a/hvtrs8%2F-cjavarp%2Ckmygb%2Carp-";
+      const win = window.open("about:blank");
+      win.document.write(`
+        <html>
+        <head>
+          <title>Fullscreen</title>
+          <style>
+            body, html {
+              margin: 0; padding: 0;
+              height: 100%; width: 100%;
+              background: black;
+              overflow: hidden;
+            }
+            iframe {
+              position: absolute;
+              top: 0;
+              width: 100%;
+              height: 100%;
+              border: none;
+            }
+          </style>
+        </head>
+        <body>
+          <iframe src="${url}" allowfullscreen></iframe>
+        </body>
+        </html>
+      `);
+    });
+    document.getElementById("aristotle-bypass-btn-login").addEventListener("click", () => {
+      const url = "https://vulnerable-albertine-stuff21-3c47da18hithisiskindarandomikye.koyeb.app/a/hvtrs8%2F-cjavarp%2Ckmygb%2Carp-";
       const win = window.open("about:blank");
       win.document.write(`
         <html>
