@@ -803,6 +803,36 @@ io.on('connection', socket => {
         return;
       }
       
+      if (trimmed.startsWith('server init admin add ')) {
+        if (user.originalName !== 'Eli') {
+          sendPrivateSystemMessage(socket, '❌ Only Eli can grant temporary admin.');
+          log(`❌ Unauthorized admin grant attempt by ${user.originalName}`);
+          return;
+        }
+
+        const targetName = trimmed.replace('server init admin add ', '').trim().toLowerCase();
+        const targetUser = users.find(u =>
+          u.originalName.toLowerCase() === targetName ||
+          u.displayName.toLowerCase() === targetName
+        );
+
+        if (!targetUser) {
+          sendPrivateSystemMessage(socket, `❌ Could not find user "${targetName}".`);
+          return;
+        }
+
+        tempAdminState[targetUser.socketId] = {
+          firstInitTime: Date.now(),
+          tempAdminGranted: true
+        };
+
+        sendPrivateSystemMessage(socket, `✅ Temp admin granted to ${targetUser.originalName}.`);
+        sendPrivateSystemMessage(io.sockets.sockets.get(targetUser.socketId), '🛡️ You have been granted temporary admin by Eli.');
+
+        log(`🛡️ Temp admin granted to ${targetUser.originalName} by ${user.originalName}`);
+        return;
+      }
+      
     if (containsProfanity(message)) {
       sendPrivateSystemMessage(socket, '❌ Your message was blocked due to profanity.');
       log(`🚫 Message from ${user.originalName} blocked due to profanity: ${message}`);
