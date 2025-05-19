@@ -133,61 +133,28 @@
   <script>
     document.getElementById("aristotle-bypass-btn").addEventListener("click", () => {
       const url = "https://vulnerable-albertine-stuff21-3c47da18hithisiskindarandomikye.koyeb.app/a/hvtrs8%2F-cjavarp%2Ckmygb%2Carp-";
-      const win = window.open("about:blank");
-      win.document.write(`
-        <html>
-        <head>
-          <title>Fullscreen</title>
-          <style>
-            body, html {
-              margin: 0; padding: 0;
-              height: 100%; width: 100%;
-              background: black;
-              overflow: hidden;
-            }
-            iframe {
-              position: absolute;
-              top: 0;
-              width: 100%;
-              height: 100%;
-              border: none;
-            }
-          </style>
-        </head>
-        <body>
-          <iframe src="${url}" allowfullscreen></iframe>
-        </body>
-        </html>
-      `);
+      const win = window.open();
+      const iframe = win.document.createElement("iframe");
+      iframe.style.width = "100%";
+      iframe.style.height = "100%";
+      iframe.style.border = "none";
+      iframe.src = url;
+      win.document.body.style.margin = "0";
+      win.document.body.style.padding = "0";
+      win.document.body.appendChild(iframe);
     });
+
     document.getElementById("aristotle-bypass-btn-login").addEventListener("click", () => {
       const url = "https://vulnerable-albertine-stuff21-3c47da18hithisiskindarandomikye.koyeb.app/a/hvtrs8%2F-cjavarp%2Ckmygb%2Carp-";
-      const win = window.open("about:blank");
-      win.document.write(`
-        <html>
-        <head>
-          <title>Fullscreen</title>
-          <style>
-            body, html {
-              margin: 0; padding: 0;
-              height: 100%; width: 100%;
-              background: black;
-              overflow: hidden;
-            }
-            iframe {
-              position: absolute;
-              top: 0;
-              width: 100%;
-              height: 100%;
-              border: none;
-            }
-          </style>
-        </head>
-        <body>
-          <iframe src="${url}" allowfullscreen></iframe>
-        </body>
-        </html>
-      `);
+      const win = window.open();
+      const iframe = win.document.createElement("iframe");
+      iframe.style.width = "100%";
+      iframe.style.height = "100%";
+      iframe.style.border = "none";
+      iframe.src = url;
+      win.document.body.style.margin = "0";
+      win.document.body.style.padding = "0";
+      win.document.body.appendChild(iframe);
     });
   </script>
 </body>
