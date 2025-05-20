@@ -12,6 +12,7 @@ const io = new Server(server);
 const CHAT_HISTORY_FILE = path.join(__dirname, 'chat-history.json');
 let chatHistory = [];
 let activePoll = null;
+let kickEnabled = true;
 
 if (fs.existsSync(CHAT_HISTORY_FILE)) {
   try {
@@ -345,8 +346,8 @@ io.on('connection', socket => {
 
       // === END POLL ===
       if (trimmed === 'server init endpoll') {
-        if (user.originalName !== 'Eli') {
-          sendPrivateSystemMessage(socket, '❌ Only Eli can end the poll.');
+        if (!record?.tempAdminGranted) {
+          sendPrivateSystemMessage(socket, '❌ Only admins can end the poll.');
           return;
         }
 
@@ -608,39 +609,48 @@ io.on('connection', socket => {
       return;
     }
 
-    if (trimmed.startsWith('server init kick ')) {
-      const targetName = trimmed.replace('server init kick ', '').trim();
-      const targetUser = users.find(u => u.originalName.toLowerCase() === targetName.toLowerCase() || u.displayName.toLowerCase() === targetName.toLowerCase());
-      if (targetUser) {
-        const targetSocket = io.sockets.sockets.get(targetUser.socketId);
-        if (targetSocket) {
-          let countdown = 0;
-          const interval = setInterval(() => {
-            if (countdown > 0) {
-              sendPrivateSystemMessage(targetSocket, `⚠️ You will be kicked in ${countdown--} second(s)...`);
-            } else {
-              clearInterval(interval);
-              kickedUsers[targetUser.socketId] = true;
-              sendPrivateSystemMessage(targetSocket, '❌ You were kicked by admin.');
-              const adminMessage = `${targetUser.originalName} was kicked by ${user.originalName}.`;
-              broadcastSystemMessage(adminMessage);
-              log(`🚫 Kicked ${targetUser.originalName} by ${user.originalName}`);
-              // Notify Eli
-              const eliUser = users.find(u => u.originalName === 'Eli');
-              if (eliUser && user.originalName !== 'Eli') {
-                const eliSocket = io.sockets.sockets.get(eliUser.socketId);
-                if (eliSocket) {
-                  sendPrivateSystemMessage(eliSocket, `Admin command executed by ${user.originalName}: ${adminMessage.replace(/^[^a-zA-Z0-9]+/, '')}`);
+      if (trimmed.startsWith('server init kick ')) {
+        if (!kickEnabled) {
+          sendPrivateSystemMessage(socket, '🚫 Kicking is currently disabled.');
+          return;
+        }
+
+        const targetName = trimmed.replace('server init kick ', '').trim();
+        const targetUser = users.find(u =>
+          u.originalName.toLowerCase() === targetName.toLowerCase() ||
+          u.displayName.toLowerCase() === targetName.toLowerCase()
+        );
+
+        if (targetUser) {
+          const targetSocket = io.sockets.sockets.get(targetUser.socketId);
+          if (targetSocket) {
+            let countdown = 0;
+            const interval = setInterval(() => {
+              if (countdown > 0) {
+                sendPrivateSystemMessage(targetSocket, `⚠️ You will be kicked in ${countdown--} second(s)...`);
+              } else {
+                clearInterval(interval);
+                kickedUsers[targetUser.socketId] = true;
+                sendPrivateSystemMessage(targetSocket, '❌ You were kicked by admin.');
+                const adminMessage = `${targetUser.originalName} was kicked by ${user.originalName}.`;
+                broadcastSystemMessage(adminMessage);
+                log(`🚫 Kicked ${targetUser.originalName} by ${user.originalName}`);
+                // Notify Eli
+                const eliUser = users.find(u => u.originalName === 'Eli');
+                if (eliUser && user.originalName !== 'Eli') {
+                  const eliSocket = io.sockets.sockets.get(eliUser.socketId);
+                  if (eliSocket) {
+                    sendPrivateSystemMessage(eliSocket, `Admin command executed by ${user.originalName}: ${adminMessage.replace(/^[^a-zA-Z0-9]+/, '')}`);
+                  }
                 }
               }
-            }
-          }, 1000);
+            }, 1000);
+          }
+        } else {
+          sendPrivateSystemMessage(socket, `❌ Could not find user "${targetName}".`);
         }
-      } else {
-        sendPrivateSystemMessage(socket, `❌ Could not find user "${targetName}".`);
+        return;
       }
-      return;
-    }
       
       if (trimmed.startsWith('server init unkick ')) {
         const targetName = trimmed.replace('server init unkick ', '').trim();
@@ -804,12 +814,10 @@ io.on('connection', socket => {
         return;
       }
       
-      if (trimmed.startsWith('server init admin add ')) {
-        if (user.originalName !== 'Eli') {
-          sendPrivateSystemMessage(socket, '❌ Only Eli can grant temporary admin.');
-          log(`❌ Unauthorized admin grant attempt by ${user.originalName}`);
-          return;
-        }
+      if (!record?.tempAdminGranted) {
+        sendPrivateSystemMessage(socket, '❌ Only admins can grant admin access.');
+        return;
+      }
 
         const targetName = trimmed.replace('server init admin add ', '').trim().toLowerCase();
         const targetUser = users.find(u =>
@@ -855,6 +863,21 @@ io.on('connection', socket => {
         log(`🛡️ Profanity filter disabled by ${user.originalName}`);
         return;
       }
+            
+            if (trimmed === 'server init kickoff') {
+              kickEnabled = false;
+              const adminMessage = '🚫 Kicking is now disabled.';
+              broadcastSystemMessage(adminMessage);
+              return;
+            }
+
+            if (trimmed === 'server init kickon') {
+              kickEnabled = true;
+              const adminMessage = '✅ Kicking is now enabled.';
+              broadcastSystemMessage(adminMessage);
+              return;
+            }
+            
 
     if (profanityFilterEnabled && containsProfanity(message)) {
       sendPrivateSystemMessage(socket, '❌ Your message was blocked due to profanity.');
