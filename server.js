@@ -852,15 +852,25 @@ io.on('connection', socket => {
       }
       
       if (trimmed === 'server init kickoff') {
+        if (user.originalName !== 'Eli') {
+          sendPrivateSystemMessage(socket, '❌ Only Eli can disable kicking.');
+          return;
+        }
+
         kickingEnabled = false;
-        broadcastSystemMessage('🚫 Kick command has been DISABLED by admin.');
+        broadcastSystemMessage('🚫 Kick command has been DISABLED by Eli.');
         log(`🚫 Kicking disabled by ${user.originalName}`);
         return;
       }
 
       if (trimmed === 'server init kickon') {
+        if (user.originalName !== 'Eli') {
+          sendPrivateSystemMessage(socket, '❌ Only Eli can enable kicking.');
+          return;
+        }
+
         kickingEnabled = true;
-        broadcastSystemMessage('✅ Kick command has been ENABLED by admin.');
+        broadcastSystemMessage('✅ Kick command has been ENABLED by Eli.');
         log(`✅ Kicking enabled by ${user.originalName}`);
         return;
       }
