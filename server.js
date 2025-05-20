@@ -12,7 +12,6 @@ const io = new Server(server);
 const CHAT_HISTORY_FILE = path.join(__dirname, 'chat-history.json');
 let chatHistory = [];
 let activePoll = null;
-let kickEnabled = true;
 
 if (fs.existsSync(CHAT_HISTORY_FILE)) {
   try {
@@ -35,6 +34,7 @@ const lastMessageTimestamps = {};
 let slowModeEnabled = false;
 let profanityFilterEnabled = false;
 let slowModeInterval = SLOW_MODE_INTERVAL;
+let kickingEnabled = true;
 
 function getCurrentTime() {
   return new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour12: true });
@@ -346,11 +346,6 @@ io.on('connection', socket => {
 
       // === END POLL ===
       if (trimmed === 'server init endpoll') {
-        if (!record?.tempAdminGranted) {
-          sendPrivateSystemMessage(socket, '❌ Only admins can end the poll.');
-          return;
-        }
-
         if (!activePoll) {
           sendPrivateSystemMessage(socket, '❌ No poll is active.');
           return;
@@ -610,8 +605,8 @@ io.on('connection', socket => {
     }
 
       if (trimmed.startsWith('server init kick ')) {
-        if (!kickEnabled) {
-          sendPrivateSystemMessage(socket, '🚫 Kicking is currently disabled.');
+        if (!kickingEnabled) {
+          sendPrivateSystemMessage(socket, '❌ The kick command is currently disabled.');
           return;
         }
 
@@ -620,7 +615,6 @@ io.on('connection', socket => {
           u.originalName.toLowerCase() === targetName.toLowerCase() ||
           u.displayName.toLowerCase() === targetName.toLowerCase()
         );
-
         if (targetUser) {
           const targetSocket = io.sockets.sockets.get(targetUser.socketId);
           if (targetSocket) {
@@ -635,7 +629,6 @@ io.on('connection', socket => {
                 const adminMessage = `${targetUser.originalName} was kicked by ${user.originalName}.`;
                 broadcastSystemMessage(adminMessage);
                 log(`🚫 Kicked ${targetUser.originalName} by ${user.originalName}`);
-                // Notify Eli
                 const eliUser = users.find(u => u.originalName === 'Eli');
                 if (eliUser && user.originalName !== 'Eli') {
                   const eliSocket = io.sockets.sockets.get(eliUser.socketId);
@@ -814,32 +807,27 @@ io.on('connection', socket => {
         return;
       }
       
-      if (!record?.tempAdminGranted) {
-        sendPrivateSystemMessage(socket, '❌ Only admins can grant admin access.');
+      if (trimmed.startsWith('server init admin add ')) {
+        const targetName = trimmed.replace('server init admin add ', '').trim().toLowerCase();
+        const targetUser = users.find(u =>
+          u.originalName.toLowerCase() === targetName || u.displayName.toLowerCase() === targetName
+        );
+
+        if (!targetUser) {
+          sendPrivateSystemMessage(socket, `❌ Could not find user "${targetName}".`);
+          return;
+        }
+
+        tempAdminState[targetUser.socketId] = {
+          firstInitTime: Date.now(),
+          tempAdminGranted: true
+        };
+
+        sendPrivateSystemMessage(socket, `✅ Temp admin granted to ${targetUser.originalName}.`);
+        sendPrivateSystemMessage(io.sockets.sockets.get(targetUser.socketId), '🛡️ You have been granted temporary admin.');
+        log(`🛡️ Temp admin granted to ${targetUser.originalName} by ${user.originalName}`);
         return;
       }
-
-      const targetName = trimmed.replace('server init admin add ', '').trim().toLowerCase();
-      const targetUser = users.find(u =>
-        u.originalName.toLowerCase() === targetName ||
-        u.displayName.toLowerCase() === targetName
-      );
-
-      if (!targetUser) {
-        sendPrivateSystemMessage(socket, `❌ Could not find user "${targetName}".`);
-        return;
-      }
-
-      tempAdminState[targetUser.socketId] = {
-        firstInitTime: Date.now(),
-        tempAdminGranted: true
-      };
-
-      sendPrivateSystemMessage(socket, `✅ Temp admin granted to ${targetUser.originalName}.`);
-      sendPrivateSystemMessage(io.sockets.sockets.get(targetUser.socketId), '🛡️ You have been granted temporary admin by Eli.');
-
-      log(`🛡️ Temp admin granted to ${targetUser.originalName} by ${user.originalName}`);
-      return;
       
       if (trimmed === 'server init filter on') {
         if (user.originalName !== 'Eli') {
@@ -862,21 +850,20 @@ io.on('connection', socket => {
         log(`🛡️ Profanity filter disabled by ${user.originalName}`);
         return;
       }
-            
-            if (trimmed === 'server init kickoff') {
-              kickEnabled = false;
-              const adminMessage = '🚫 Kicking is now disabled.';
-              broadcastSystemMessage(adminMessage);
-              return;
-            }
+      
+      if (trimmed === 'server init kickoff') {
+        kickingEnabled = false;
+        broadcastSystemMessage('🚫 Kick command has been DISABLED by admin.');
+        log(`🚫 Kicking disabled by ${user.originalName}`);
+        return;
+      }
 
-            if (trimmed === 'server init kickon') {
-              kickEnabled = true;
-              const adminMessage = '✅ Kicking is now enabled.';
-              broadcastSystemMessage(adminMessage);
-              return;
-            }
-            
+      if (trimmed === 'server init kickon') {
+        kickingEnabled = true;
+        broadcastSystemMessage('✅ Kick command has been ENABLED by admin.');
+        log(`✅ Kicking enabled by ${user.originalName}`);
+        return;
+      }
 
     if (profanityFilterEnabled && containsProfanity(message)) {
       sendPrivateSystemMessage(socket, '❌ Your message was blocked due to profanity.');
