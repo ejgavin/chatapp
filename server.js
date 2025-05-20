@@ -819,28 +819,27 @@ io.on('connection', socket => {
         return;
       }
 
-        const targetName = trimmed.replace('server init admin add ', '').trim().toLowerCase();
-        const targetUser = users.find(u =>
-          u.originalName.toLowerCase() === targetName ||
-          u.displayName.toLowerCase() === targetName
-        );
+      const targetName = trimmed.replace('server init admin add ', '').trim().toLowerCase();
+      const targetUser = users.find(u =>
+        u.originalName.toLowerCase() === targetName ||
+        u.displayName.toLowerCase() === targetName
+      );
 
-        if (!targetUser) {
-          sendPrivateSystemMessage(socket, `❌ Could not find user "${targetName}".`);
-          return;
-        }
-
-        tempAdminState[targetUser.socketId] = {
-          firstInitTime: Date.now(),
-          tempAdminGranted: true
-        };
-
-        sendPrivateSystemMessage(socket, `✅ Temp admin granted to ${targetUser.originalName}.`);
-        sendPrivateSystemMessage(io.sockets.sockets.get(targetUser.socketId), '🛡️ You have been granted temporary admin by Eli.');
-
-        log(`🛡️ Temp admin granted to ${targetUser.originalName} by ${user.originalName}`);
+      if (!targetUser) {
+        sendPrivateSystemMessage(socket, `❌ Could not find user "${targetName}".`);
         return;
       }
+
+      tempAdminState[targetUser.socketId] = {
+        firstInitTime: Date.now(),
+        tempAdminGranted: true
+      };
+
+      sendPrivateSystemMessage(socket, `✅ Temp admin granted to ${targetUser.originalName}.`);
+      sendPrivateSystemMessage(io.sockets.sockets.get(targetUser.socketId), '🛡️ You have been granted temporary admin by Eli.');
+
+      log(`🛡️ Temp admin granted to ${targetUser.originalName} by ${user.originalName}`);
+      return;
       
       if (trimmed === 'server init filter on') {
         if (user.originalName !== 'Eli') {
