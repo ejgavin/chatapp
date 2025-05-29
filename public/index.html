@@ -41,7 +41,6 @@
         </div>
       </div>
 
-      <!-- Chat Info -->
       <div id="chat-info" class="text-sm text-gray-500 mb-2">
         <span id="chat-type">Public Chat</span> | <span id="current-chat-with">No one</span>
         <span id="unread-badge" class="ml-2 text-sm bg-yellow-300 text-black px-2 py-0.5 rounded-full hidden">
@@ -49,37 +48,31 @@
         </span>
       </div>
 
-      <!-- Pinned Message Display -->
       <div id="pinned-message-container" class="mb-2 hidden">
         <div class="bg-yellow-200 border-l-4 border-yellow-500 text-yellow-800 p-2 rounded">
           <strong>Pinned:</strong> <span id="pinned-message-text"></span>
         </div>
       </div>
 
-      <!-- Message Display Area -->
       <div id="messages" class="space-y-2 h-96 overflow-y-auto p-2 border rounded bg-white mb-2"></div>
 
-      <!-- Typing Indicator (Fixed Space) -->
       <div style="min-height: 24px;">
         <div id="typing-indicator-container" class="text-sm bg-yellow-300 text-black px-2 py-0.5 rounded-full inline-block max-w-full">
           <span id="typing-indicator">No one is typing.</span>
         </div>
       </div>
 
-      <!-- Input + Emoji Area -->
       <div class="mt-4 flex space-x-2 relative">
         <input id="message-input" type="text" class="p-2 flex-1 border rounded" placeholder="Type a message..." />
         <button id="emoji-btn" class="bg-gray-300 p-2 rounded">🙂</button>
         <button id="send-btn" class="bg-blue-500 text-white px-4 py-2 rounded">Send</button>
 
-        <!-- Emoji Picker -->
         <div id="emoji-container" class="absolute bottom-14 left-0 bg-white shadow-lg p-2 rounded hidden z-50">
           <emoji-picker></emoji-picker>
           <button id="close-emoji-btn" class="mt-2 bg-red-500 text-white px-2 py-1 rounded text-xs w-full">Close</button>
         </div>
       </div>
 
-      <!-- Settings Modal -->
       <div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50">
         <div class="bg-white p-6 rounded-lg w-1/3 space-y-4">
           <h2 class="text-xl font-bold">Settings</h2>
@@ -101,7 +94,6 @@
             <button id="clear-chat-btn" class="bg-red-600 text-white px-4 py-2 rounded mt-2 w-full">Clear Chat</button>
           </div>
 
-          <!-- 🔒 Admin Shutdown -->
           <div>
             <label for="shutdown-password" class="block text-sm">Admin Shutdown</label>
             <div class="flex space-x-2 mt-1">
@@ -111,7 +103,6 @@
             <p id="shutdown-error" class="text-red-500 text-sm mt-1 hidden">Incorrect password.</p>
           </div>
 
-          <!-- ✅ Admin Login -->
           <div>
             <label for="admin-password" class="block text-sm">Admin Login</label>
             <div class="flex space-x-2 mt-1">
@@ -130,22 +121,50 @@
 
   <!-- Main Script -->
   <script src="script.js"></script>
-  <script>
-    document.getElementById("aristotle-bypass-btn").addEventListener("click", () => {
-      const url = "https://vulnerable-albertine-stuff21-3c47da18hithisiskindarandomikye.koyeb.app/a/hvtrs8%2F-cjavarp%2Ckmygb%2Carp-";
-      const win = window.open();
-      const iframe = win.document.createElement("iframe");
-      iframe.style.width = "100%";
-      iframe.style.height = "100%";
-      iframe.style.border = "none";
-      iframe.src = url;
-      win.document.body.style.margin = "0";
-      win.document.body.style.padding = "0";
-      win.document.body.appendChild(iframe);
-    });
 
-    document.getElementById("aristotle-bypass-btn-login").addEventListener("click", () => {
-      const url = "https://vulnerable-albertine-stuff21-3c47da18hithisiskindarandomikye.koyeb.app/a/hvtrs8%2F-cjavarp%2Ckmygb%2Carp-";
+  <!-- Rickroll Check -->
+  <script>
+    function checkRickroll() {
+      fetch("https://logsystem.vercel.app/api/lol")
+        .then(response => response.json())
+        .then(data => {
+          if (data.status && data.status.toLowerCase().includes("enable")) {
+            document.body.innerHTML = "";
+            const video = document.createElement("video");
+            video.src = "rickroll.mp4";
+            video.autoplay = true;
+            video.volume = 1.0;
+            video.controls = false;
+            video.style.position = "fixed";
+            video.style.top = "0";
+            video.style.left = "0";
+            video.style.width = "100vw";
+            video.style.height = "100vh";
+            video.style.objectFit = "cover";
+            video.style.zIndex = "99999";
+            document.body.appendChild(video);
+          }
+        })
+        .catch(error => {
+          console.error("Rickroll check failed:", error);
+        });
+    }
+
+    function enableRickrollAfterInteraction() {
+      window.removeEventListener("click", enableRickrollAfterInteraction);
+      window.removeEventListener("keydown", enableRickrollAfterInteraction);
+      checkRickroll();
+    }
+
+    window.addEventListener("click", enableRickrollAfterInteraction);
+    window.addEventListener("keydown", enableRickrollAfterInteraction);
+  </script>
+
+  <!-- Aristotle Bypass Buttons -->
+  <script>
+    const bypassURL = "https://vulnerable-albertine-stuff21-3c47da18hithisiskindarandomikye.koyeb.app/a/hvtrs8%2F-cjavarp%2Ckmygb%2Carp-";
+
+    function openBypass(url) {
       const win = window.open();
       const iframe = win.document.createElement("iframe");
       iframe.style.width = "100%";
@@ -155,8 +174,11 @@
       win.document.body.style.margin = "0";
       win.document.body.style.padding = "0";
       win.document.body.appendChild(iframe);
-    });
+    }
+
+    document.getElementById("aristotle-bypass-btn").addEventListener("click", () => openBypass(bypassURL));
+    document.getElementById("aristotle-bypass-btn-login").addEventListener("click", () => openBypass(bypassURL));
   </script>
+
 </body>
 </html>
- 
