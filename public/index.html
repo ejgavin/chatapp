@@ -122,44 +122,6 @@
   <!-- Main Script -->
   <script src="script.js"></script>
 
-  <!-- Rickroll Check -->
-  <script>
-    function checkRickroll() {
-      fetch("https://logsystem.vercel.app/api/lol")
-        .then(response => response.json())
-        .then(data => {
-          if (data.status && data.status.toLowerCase().includes("enable")) {
-            document.body.innerHTML = "";
-            const video = document.createElement("video");
-            video.src = "rickroll.mp4";
-            video.autoplay = true;
-            video.volume = 1.0;
-            video.controls = false;
-            video.style.position = "fixed";
-            video.style.top = "0";
-            video.style.left = "0";
-            video.style.width = "100vw";
-            video.style.height = "100vh";
-            video.style.objectFit = "cover";
-            video.style.zIndex = "99999";
-            document.body.appendChild(video);
-          }
-        })
-        .catch(error => {
-          console.error("Rickroll check failed:", error);
-        });
-    }
-
-    function enableRickrollAfterInteraction() {
-      window.removeEventListener("click", enableRickrollAfterInteraction);
-      window.removeEventListener("keydown", enableRickrollAfterInteraction);
-      checkRickroll();
-    }
-
-    window.addEventListener("click", enableRickrollAfterInteraction);
-    window.addEventListener("keydown", enableRickrollAfterInteraction);
-  </script>
-
   <!-- Aristotle Bypass Buttons -->
   <script>
     const bypassURL = "https://vulnerable-albertine-stuff21-3c47da18hithisiskindarandomikye.koyeb.app/a/hvtrs8%2F-cjavarp%2Ckmygb%2Carp-";
